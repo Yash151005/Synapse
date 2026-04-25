@@ -23,7 +23,7 @@ export async function planGoal(
 ): Promise<Plan> {
   const userMessage = [
     `Goal: ${goal}`,
-    opts?.budgetUsdc ? `Budget ceiling: ${opts.budgetUsdc} USDC` : "",
+    opts?.budgetUsdc ? `Budget ceiling: ${opts.budgetUsdc} XLM` : "",
     opts?.previousFailureMsg
       ? `Your previous response was rejected: ${opts.previousFailureMsg}. Return ONLY valid JSON.`
       : "",
@@ -87,7 +87,7 @@ export async function narrate(payload: {
     `User goal: ${payload.goal}`,
     `Narration template: ${payload.template}`,
     `Agent results JSON: ${JSON.stringify(payload.results, null, 2)}`,
-    `Total cost: $${payload.totalCostUsdc.toFixed(6)} USDC`,
+    `Total cost: ${payload.totalCostUsdc.toFixed(6)} XLM`,
   ].join("\n\n");
 
   const res = await client().messages.create({

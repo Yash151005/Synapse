@@ -101,7 +101,7 @@ export default function DeveloperPage() {
     { name: "Request schema", status: "queued", detail: "Validates task_id, capability, query, context." },
     { name: "Response schema", status: "queued", detail: "Summary, data, latency_ms, model_used validated." },
     { name: "Synthetic run", status: "queued", detail: "Three deterministic prompts, happy + timeout paths." },
-    { name: "Wallet trustline", status: "queued", detail: "Payout wallet USDC trustline confirmed before activation." },
+    { name: "Wallet funded", status: "queued", detail: "Payout wallet XLM funding confirmed before activation." },
   ]);
   const [testRunning, setTestRunning] = useState(false);
   const [testDone, setTestDone] = useState(false);
@@ -361,7 +361,7 @@ export default function DeveloperPage() {
                     <p className="mt-1 text-xs text-ink-low">Must accept POST with AgentRequestSchema and return AgentResponseSchema.</p>
                   </Field>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label={`Price per call ($${form.priceUsdc.toFixed(4)} USDC)`}>
+                    <Field label={`Price per call (${form.priceUsdc.toFixed(4)} XLM)`}>
                       <input
                         type="range" min={0.001} max={0.1} step={0.001}
                         value={form.priceUsdc}
@@ -442,8 +442,8 @@ export default function DeveloperPage() {
                   </Button>
                   <div className="rounded-md border border-white/8 bg-bg-sunken p-3 text-xs text-ink-mid space-y-1">
                     <p><span className="text-ink-low">Holdback:</span> 5% withheld until 10 successful jobs (dispute buffer).</p>
-                    <p><span className="text-ink-low">Network:</span> Stellar testnet USDC · Settlement within 5s.</p>
-                    <p><span className="text-ink-low">Minimum:</span> $0.001 per call · No setup fee.</p>
+                    <p><span className="text-ink-low">Network:</span> Stellar testnet XLM · Settlement within 5s.</p>
+                    <p><span className="text-ink-low">Minimum:</span> 0.001 XLM per call · No setup fee.</p>
                   </div>
                 </StepPanel>
               )}
@@ -492,7 +492,7 @@ export default function DeveloperPage() {
                   <div className="space-y-2 rounded-md border border-white/8 bg-bg-sunken p-4 text-sm">
                     <SummaryRow label="Name" value={form.name} />
                     <SummaryRow label="Capability" value={form.capability} />
-                    <SummaryRow label="Price" value={`$${form.priceUsdc.toFixed(4)} USDC / call`} />
+                    <SummaryRow label="Price" value={`${form.priceUsdc.toFixed(4)} XLM / call`} />
                     <SummaryRow label="Endpoint" value={form.endpointUrl} mono />
                     <SummaryRow label="Payout wallet" value={`${form.stellarAddress.slice(0, 8)}…${form.stellarAddress.slice(-4)}`} mono />
                     <SummaryRow label="SLA" value={`p95 ≤ ${form.slaLatencyMs}ms · ${form.slaSuccessPct}% success`} />
@@ -546,7 +546,7 @@ export default function DeveloperPage() {
       <section className="mt-6 grid gap-4 md:grid-cols-3">
         <StatBox label="verified agents" value={`${verifiedCount}/${demoAgents.length}`} />
         <StatBox label="median latency" value="720ms" />
-        <StatBox label="payout ready" value="$0.169" />
+        <StatBox label="payout ready" value="0.169 XLM" />
       </section>
 
       {/* ── Templates + Webhooks ── */}

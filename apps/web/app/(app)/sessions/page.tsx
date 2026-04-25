@@ -223,7 +223,7 @@ export default function SessionsArchivePage() {
                     <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-mid">{session.narration}</p>
                   </div>
                   <div className="grid grid-cols-3 gap-3 text-right text-xs">
-                    <ArchiveStat label="cost" value={`$${session.totalCostUsdc.toFixed(4)}`} />
+                    <ArchiveStat label="cost" value={`${session.totalCostUsdc.toFixed(4)} XLM`} />
                     <ArchiveStat label="proofs" value={String(session.receiptCount)} />
                     <ArchiveStat label="risk" value={String(session.riskScore)} />
                   </div>

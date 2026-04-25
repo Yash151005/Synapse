@@ -63,8 +63,8 @@ export default function LedgerPage() {
       }
     >
       <section className="grid gap-3 md:grid-cols-3">
-        <SummaryTile icon={<CircleDollarSign className="h-5 w-5" />} label="Confirmed spend" value={`$${totalConfirmed.toFixed(4)}`} tone="mint" />
-        <SummaryTile icon={<Clock3 className="h-5 w-5" />} label="Held or pending" value={`$${heldAmount.toFixed(4)}`} tone="amber" />
+        <SummaryTile icon={<CircleDollarSign className="h-5 w-5" />} label="Confirmed spend" value={`${totalConfirmed.toFixed(4)} XLM`} tone="mint" />
+        <SummaryTile icon={<Clock3 className="h-5 w-5" />} label="Held or pending" value={`${heldAmount.toFixed(4)} XLM`} tone="amber" />
         <SummaryTile icon={<Receipt className="h-5 w-5" />} label="Receipts indexed" value={String(demoLedgerRows.length)} tone="teal" />
       </section>
 
@@ -73,7 +73,7 @@ export default function LedgerPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[11px] uppercase tracking-[0.18em] text-ink-low">receipt feed</p>
-              <h2 className="mt-1 text-lg font-semibold">Task-level USDC settlements</h2>
+              <h2 className="mt-1 text-lg font-semibold">Task-level XLM settlements</h2>
             </div>
             <div className="flex gap-2">
               <Badge tone="mint">hash memo</Badge>
@@ -124,8 +124,8 @@ export default function LedgerPage() {
                   </div>
 
                   <div>
-                    <p className="font-mono text-lg text-brand-mint">${row.amountUsdc.toFixed(6)}</p>
-                    <p className="text-xs text-ink-low">USDC</p>
+                    <p className="font-mono text-lg text-brand-mint">{row.amountUsdc.toFixed(6)}</p>
+                    <p className="text-xs text-ink-low">XLM</p>
                   </div>
 
                   <Badge tone={row.status === "confirmed" ? "mint" : row.status === "held" ? "amber" : "teal"}>
@@ -178,7 +178,7 @@ export default function LedgerPage() {
                   </div>
                   <div className="mt-2 flex items-end justify-between gap-3">
                     <div>
-                      <p className="font-mono text-xl text-brand-mint">${row.balance.toFixed(3)}</p>
+                      <p className="font-mono text-xl text-brand-mint">{row.balance.toFixed(3)} XLM</p>
                       <p className="text-xs text-ink-low">{row.cadence}</p>
                     </div>
                     <p className="text-xs text-ink-low">holdback {row.holdback}</p>

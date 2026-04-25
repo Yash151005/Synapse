@@ -14,6 +14,7 @@ type TaskVisualState =
 export interface PlanTreeProps {
   plan: Plan | null;
   taskStates: Record<string, TaskVisualState>;
+  agentNames?: Record<string, string>;
 }
 
 function stateTone(state: TaskVisualState): "neutral" | "teal" | "crimson" | "violet" | "mint" {
@@ -24,7 +25,7 @@ function stateTone(state: TaskVisualState): "neutral" | "teal" | "crimson" | "vi
   return "neutral";
 }
 
-export function PlanTree({ plan, taskStates }: PlanTreeProps) {
+export function PlanTree({ plan, taskStates, agentNames = {} }: PlanTreeProps) {
   if (!plan) {
     return (
       <div className="glass flex h-full min-h-64 items-center justify-center px-6 py-10 text-center">
@@ -60,7 +61,9 @@ export function PlanTree({ plan, taskStates }: PlanTreeProps) {
               <div className="mt-2 flex items-center gap-2 text-xs text-ink-low">
                 <span>{task.capability}</span>
                 <span>·</span>
-                <span className="font-mono">max ${task.max_price_usdc.toFixed(3)}</span>
+                <span className="text-brand-teal">{agentNames[task.id] ?? "agent pending"}</span>
+                <span>·</span>
+                <span className="font-mono">max {task.max_price_usdc.toFixed(3)} XLM</span>
                 <span>·</span>
                 <span>group {task.parallel_group}</span>
               </div>

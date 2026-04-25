@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -9,9 +9,11 @@ import {
   ExternalLink,
   FileCheck2,
   History,
+  Loader2,
   Pause,
   Play,
   ShieldCheck,
+  XCircle,
 } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -21,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { getDemoSession, getSessionReceipts, type DemoSession } from "@/lib/demo-data";
 import { supabasePublicKey } from "@/lib/supabase/env";
 import { shortHash, stellarTxUrl } from "@/lib/utils";
+import type { HorizonTxResponse } from "@/app/api/stellar/tx/[hash]/route";
 
 type ReceiptView = {
   id: string;
@@ -103,6 +106,8 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const [session, setSession] = useState<SessionView>(() => ({ ...EMPTY_SESSION, id }));
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
+  const [horizonData, setHorizonData] = useState<Record<string, HorizonTxResponse>>({});
+  const fetchedTxRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!authLoading && !authSession) {
@@ -170,6 +175,21 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     };
   }, [authSession, id]);
 
+  // Enrich receipts with live Horizon data
+  useEffect(() => {
+    for (const receipt of session.receipts) {
+      const hash = receipt.stellarTxHash;
+      if (hash && hash.length === 64 && !fetchedTxRef.current.has(hash)) {
+        fetchedTxRef.current.add(hash);
+        void fetch(`/api/stellar/tx/${hash}`)
+          .then((r) => r.ok ? r.json() : null)
+          .then((data: HorizonTxResponse | null) => {
+            if (data) setHorizonData((prev) => ({ ...prev, [hash]: data }));
+          });
+      }
+    }
+  }, [session.receipts]);
+
   if (authLoading || !authSession) {
     return (
       <main className="min-h-screen bg-bg-base text-ink-high grid-bg">
@@ -215,7 +235,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         <>
           <section className="grid gap-3 md:grid-cols-4">
             <Summary label="status" value={session.status} tone="teal" />
-            <Summary label="cost" value={`$${session.totalCostUsdc.toFixed(6)}`} tone="mint" />
+            <Summary label="cost" value={`${session.totalCostUsdc.toFixed(6)} XLM`} tone="mint" />
             <Summary label="receipts" value={`${verifiedReceipts}/${session.receipts.length}`} tone="violet" />
             <Summary label="risk" value={String(session.riskScore)} tone="amber" />
           </section>
@@ -237,7 +257,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
 
               <div className="mt-5 space-y-3">
                 {session.tasks.map((task, index) => (
-                  <div key={task.id} className="grid gap-3 rounded-md border border-white/8 bg-white/[0.03] p-3 md:grid-cols-[80px_1fr_auto] md:items-center">
+                  <div key={task.id} className="grid gap-3 rounded-md border border-white/8 bg-white/3 p-3 md:grid-cols-[80px_1fr_auto] md:items-center">
                     <div className="font-mono text-xs text-ink-low">
                       +{Math.max(1, index * 11 + 4)}s
                     </div>
@@ -252,7 +272,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
                         {task.agent} / {task.capability} / confidence {task.confidence}%
                       </p>
                     </div>
-                    <span className="font-mono text-sm text-brand-mint">${task.costUsdc.toFixed(4)}</span>
+                    <span className="font-mono text-sm text-brand-mint">{task.costUsdc.toFixed(4)} XLM</span>
                   </div>
                 ))}
               </div>
@@ -303,7 +323,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
                 <div className="text-[11px] uppercase tracking-[0.18em] text-ink-low">bookmarks</div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {session.bookmarks.map((bookmark) => (
-                    <span key={bookmark} className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-xs text-ink-mid">
+                    <span key={bookmark} className="rounded-full border border-white/8 bg-white/3 px-3 py-1 text-xs text-ink-mid">
                       {bookmark}
                     </span>
                   ))}
@@ -325,49 +345,111 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
               {session.receipts.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-ink-low">No receipts recorded for this session yet.</div>
               ) : (
-                session.receipts.map((receipt, index) => (
-                  <div
-                    key={receipt.id}
-                    className={`grid gap-3 px-4 py-4 text-sm lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-center ${
-                      index > 0 ? "border-t border-white/5" : ""
-                    }`}
-                  >
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-ink-high">{receipt.agentName}</span>
-                        <Badge tone="violet">{receipt.capability}</Badge>
+                session.receipts.map((receipt, index) => {
+                  const hz = horizonData[receipt.stellarTxHash];
+                  const memoMatch = hz?.memo_hex
+                    ? hz.memo_hex === receipt.requestHash
+                    : null;
+
+                  return (
+                    <div
+                      key={receipt.id}
+                      className={`px-4 py-4 text-sm ${index > 0 ? "border-t border-white/5" : ""}`}
+                    >
+                      {/* Top row */}
+                      <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto] lg:items-start">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-ink-high">{receipt.agentName}</span>
+                            <Badge tone="violet">{receipt.capability}</Badge>
+                            <Badge tone={receipt.status === "confirmed" ? "mint" : receipt.status === "held" ? "amber" : "teal"}>
+                              {receipt.status}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 font-mono text-xs text-ink-low">{receipt.taskId}</p>
+                        </div>
+                        <div className="font-mono text-xs space-y-1">
+                          <a
+                            href={stellarTxUrl(receipt.stellarTxHash)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-brand-teal hover:underline"
+                          >
+                            {shortHash(receipt.stellarTxHash, 8, 8)}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                          <p className="text-ink-low">
+                            ledger {hz?.ledger ? `#${hz.ledger.toLocaleString()}` : (receipt.stellarLedger ? `#${receipt.stellarLedger}` : "pending")}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-mono text-lg text-brand-mint">{receipt.amountUsdc.toFixed(6)} XLM</p>
+                        </div>
                       </div>
-                      <p className="mt-1 font-mono text-xs text-ink-low">{receipt.taskId}</p>
+
+                      {/* Horizon proof row */}
+                      <div className="mt-3 grid gap-x-6 gap-y-1.5 rounded-md border border-white/5 bg-black/20 px-3 py-2 font-mono text-[11px] sm:grid-cols-2 lg:grid-cols-4">
+                        {/* Tx confirmed time */}
+                        <ProofCell
+                          label="Block time"
+                          value={hz ? new Date(hz.created_at).toLocaleString() : "—"}
+                          loading={!hz}
+                        />
+                        {/* Fee */}
+                        <ProofCell
+                          label="Fee paid"
+                          value={hz ? `${hz.fee_xlm} XLM` : "—"}
+                          loading={!hz}
+                        />
+                        {/* Memo proof */}
+                        <div>
+                          <p className="text-ink-low">Memo proof</p>
+                          {!hz ? (
+                            <span className="flex items-center gap-1 text-ink-low/50">
+                              <Loader2 className="h-3 w-3 animate-spin" /> checking…
+                            </span>
+                          ) : memoMatch === null ? (
+                            <span className="text-ink-low">no hash memo</span>
+                          ) : memoMatch ? (
+                            <span className="flex items-center gap-1 text-brand-mint">
+                              <CheckCircle2 className="h-3 w-3" /> matched
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-brand-amber">
+                              <XCircle className="h-3 w-3" /> mismatch
+                            </span>
+                          )}
+                        </div>
+                        {/* On-chain status */}
+                        <div>
+                          <p className="text-ink-low">On-chain</p>
+                          {!hz ? (
+                            <span className="flex items-center gap-1 text-ink-low/50">
+                              <Loader2 className="h-3 w-3 animate-spin" /> fetching…
+                            </span>
+                          ) : hz.successful ? (
+                            <span className="flex items-center gap-1 text-brand-mint">
+                              <CheckCircle2 className="h-3 w-3" /> confirmed
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-brand-crimson">
+                              <XCircle className="h-3 w-3" /> failed
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Hash audit row */}
+                      <div className="mt-2 grid gap-x-4 gap-y-1 font-mono text-[11px] text-ink-low sm:grid-cols-3">
+                        <p>req <span className="text-ink-mid">{shortHash(receipt.requestHash, 8, 6)}</span></p>
+                        <p>res <span className="text-ink-mid">{shortHash(receipt.responseHash, 8, 6)}</span></p>
+                        <p className={memoMatch === true ? "text-brand-mint" : memoMatch === false ? "text-brand-amber" : ""}>
+                          memo <span>{hz?.memo_hex ? shortHash(hz.memo_hex, 8, 6) : shortHash(receipt.memoHash, 8, 6)}</span>
+                        </p>
+                      </div>
                     </div>
-                    <div className="font-mono text-xs">
-                      <a
-                        href={stellarTxUrl(receipt.stellarTxHash)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-brand-teal hover:underline"
-                      >
-                        {shortHash(receipt.stellarTxHash, 6, 6)}
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                      <p className="mt-1 text-ink-low">
-                        ledger {receipt.stellarLedger ?? "pending"}
-                      </p>
-                    </div>
-                    <div className="space-y-1 font-mono text-xs text-ink-low">
-                      <p>req {shortHash(receipt.requestHash, 6, 6)}</p>
-                      <p>res {shortHash(receipt.responseHash, 6, 6)}</p>
-                      <p className={receipt.requestHash === receipt.memoHash ? "text-brand-mint" : "text-brand-amber"}>
-                        memo {shortHash(receipt.memoHash, 6, 6)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-mono text-lg text-brand-mint">${receipt.amountUsdc.toFixed(6)}</p>
-                      <Badge tone={receipt.status === "confirmed" ? "mint" : receipt.status === "held" ? "amber" : "teal"}>
-                        {receipt.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </section>
@@ -464,9 +546,24 @@ function Summary({ label, value, tone }: { label: string; value: string; tone: "
   );
 }
 
+function ProofCell({ label, value, loading }: { label: string; value: string; loading?: boolean }) {
+  return (
+    <div>
+      <p className="text-ink-low">{label}</p>
+      {loading ? (
+        <span className="flex items-center gap-1 text-ink-low/50">
+          <Loader2 className="h-3 w-3 animate-spin" />—
+        </span>
+      ) : (
+        <span className="text-ink-mid">{value}</span>
+      )}
+    </div>
+  );
+}
+
 function ProofToggle({ label, enabled }: { label: string; enabled: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-sm border border-white/8 bg-white/[0.03] px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-sm border border-white/8 bg-white/3 px-3 py-2">
       <span className="text-sm text-ink-mid">{label}</span>
       {enabled ? <CheckCircle2 className="h-4 w-4 text-brand-mint" /> : <FileCheck2 className="h-4 w-4 text-ink-low" />}
     </div>

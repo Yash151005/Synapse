@@ -38,9 +38,14 @@ function normalizeAgent(agent: Partial<DemoAgent>): DemoAgent {
     description: agent.description ?? fallback.description,
     capability: agent.capability ?? fallback.capability,
     price_usdc: Number(agent.price_usdc ?? fallback.price_usdc),
+    stellar_address: agent.stellar_address ?? fallback.stellar_address,
     reputation: Number(agent.reputation ?? fallback.reputation),
     total_jobs: Number(agent.total_jobs ?? fallback.total_jobs),
   };
+}
+
+function isStellarAddress(value: string | undefined): value is string {
+  return /^G[A-Z2-7]{55}$/.test(value ?? "");
 }
 
 export default function MarketplacePage() {
@@ -176,7 +181,7 @@ export default function MarketplacePage() {
             <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
               <Benchmark label="rep" value={bestAgent.reputation.toFixed(2)} />
               <Benchmark label="p95" value={`${bestAgent.latencyMs}ms`} />
-              <Benchmark label="cost" value={`$${bestAgent.p95Cost.toFixed(3)}`} />
+              <Benchmark label="cost" value={`${bestAgent.p95Cost.toFixed(3)} XLM`} />
             </div>
           </div>
         </div>
@@ -204,7 +209,7 @@ export default function MarketplacePage() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-mono text-xl text-brand-mint">${agent.price_usdc.toFixed(3)}</p>
+                <p className="font-mono text-xl text-brand-mint">{agent.price_usdc.toFixed(3)} XLM</p>
                 <p className="text-xs text-ink-low">per call</p>
               </div>
             </div>
@@ -231,10 +236,14 @@ export default function MarketplacePage() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  window.open(`https://stellar.expert/explorer/testnet/search?term=${encodeURIComponent(agent.name)}`, "_blank", "noopener,noreferrer");
+                  if (isStellarAddress(agent.stellar_address)) {
+                    window.open(`https://stellar.expert/explorer/testnet/account/${agent.stellar_address}`, "_blank", "noopener,noreferrer");
+                    return;
+                  }
+                  router.push("/ledger");
                 }}
               >
-                Inspect
+                {isStellarAddress(agent.stellar_address) ? "Inspect" : "Receipts"}
                 <ArrowRight className="h-4 w-4" />
               </Button>
               <Button

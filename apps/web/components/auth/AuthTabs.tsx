@@ -130,7 +130,7 @@ export function AuthTabs({ initialTab = "login" }: { initialTab?: AuthTab }) {
           </div>
 
           <div className="mt-10 grid gap-3 md:grid-cols-3">
-            <TrustTile icon={<Wallet className="h-4 w-4" />} label="Guest wallet" value="$0.05 cap" />
+            <TrustTile icon={<Wallet className="h-4 w-4" />} label="Guest wallet" value="0.05 XLM cap" />
             <TrustTile icon={<Fingerprint className="h-4 w-4" />} label="Auth mode" value="Passkey ready" />
             <TrustTile icon={<BadgeCheck className="h-4 w-4" />} label="Provider checks" value="6-step validation" />
           </div>
@@ -275,7 +275,7 @@ export function AuthTabs({ initialTab = "login" }: { initialTab?: AuthTab }) {
               <label className="block rounded-md border border-white/10 bg-black/20 px-3 py-3">
                 <div className="flex items-center justify-between text-xs text-ink-low">
                   <span>{role === "provider" ? "First payout holdback" : "Session spend limit"}</span>
-                  <span className="font-mono text-brand-mint">${spendLimit.toFixed(3)} USDC</span>
+                  <span className="font-mono text-brand-mint">{spendLimit.toFixed(3)} XLM</span>
                 </div>
                 <input
                   type="range"

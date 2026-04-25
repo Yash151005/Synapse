@@ -56,7 +56,7 @@ export default function LandingPage() {
 
         <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[color:var(--color-ink-mid)]">
           Speak a goal. Synapse decomposes it, hires specialist AI agents, pays each
-          one in USDC on Stellar, and narrates the result back to you — all in under
+          one in XLM on Stellar, and narrates the result back to you — all in under
           60 seconds. Sub-cent payments. Zero KYC. Verifiable receipts.
         </p>
 
@@ -75,8 +75,8 @@ export default function LandingPage() {
 
         {/* receipts strip */}
         <dl className="mt-16 grid grid-cols-2 gap-6 md:grid-cols-4">
-          <Stat label="Stripe minimum" value="$0.30" tone="ink" mono />
-          <Stat label="Synapse min" value="$0.001" tone="mint" mono />
+          <Stat label="Stellar network" value="testnet" tone="ink" mono />
+          <Stat label="Synapse min" value="0.001 XLM" tone="mint" mono />
           <Stat label="Cheaper" value="300×" tone="crimson" />
           <Stat label="End-to-end" value="<60s" tone="teal" />
         </dl>
@@ -100,7 +100,7 @@ export default function LandingPage() {
           <Feature
             icon={<Receipt className="h-5 w-5" />}
             title="Every payment on-chain"
-            body="USDC on Stellar. SHA-256 receipt memos. Verify any payment on stellar.expert in one click."
+            body="XLM on Stellar. SHA-256 receipt memos. Verify any payment on stellar.expert in one click."
             tone="mint"
           />
         </div>

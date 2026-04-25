@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       stellar_address: d.stellar_address,
       reputation: 5.0,
       total_jobs: 0,
-      embedding: embedding as unknown as string,
+      embedding,
       metadata: {
         sla_latency_ms: d.sla_latency_ms,
         sla_success_pct: d.sla_success_pct,

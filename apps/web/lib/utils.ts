@@ -12,7 +12,7 @@ export function shortHash(hash: string, head = 4, tail = 4): string {
   return `${hash.slice(0, head)}…${hash.slice(-tail)}`;
 }
 
-/** Format USDC amount with up to 6 decimals, trimming trailing zeros except 2 */
+/** Format XLM amount with up to 6 decimals, trimming trailing zeros except 2 */
 export function formatUSDC(amount: number | string, opts?: { decimals?: number }): string {
   const n = typeof amount === "string" ? Number(amount) : amount;
   const d = opts?.decimals ?? 6;

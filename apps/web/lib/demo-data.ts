@@ -7,6 +7,7 @@ export type DemoAgent = {
   capability: Capability;
   description: string;
   price_usdc: number;
+  stellar_address?: string;
   reputation: number;
   total_jobs: number;
   verified: boolean;

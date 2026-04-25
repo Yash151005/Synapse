@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { VoiceOrb } from "@/components/voice/VoiceOrb";
 import { PlanTree } from "@/components/plan/PlanTree";
-import { CostMeter } from "@/components/ledger/CostMeter";
 import { TxFeed } from "@/components/ledger/TxFeed";
 import { AgentGraph3D } from "@/components/network/AgentGraph3D";
 
@@ -20,6 +19,7 @@ type OrchestrateResponse = {
   sessionId: string;
   plan: Plan;
   tasks: Array<{ id: string; result?: { ok?: boolean } }>;
+  agents?: Record<string, { name?: string; capability?: string; price_usdc?: number }>;
   totalCostUsdc: number;
   narration: string;
 };
@@ -72,6 +72,7 @@ export default function StudioPage() {
   const [narration, setNarration] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [totalCostUsdc, setTotalCostUsdc] = useState(0);
+  const [agentNames, setAgentNames] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [taskStates, setTaskStates] = useState<Record<string, TaskVisualState>>({});
   const [budgetUsdc, setBudgetUsdc] = useState(0.05);
@@ -192,7 +193,7 @@ export default function StudioPage() {
     const finalGoal = (inputGoal ?? goal).trim();
     if (!finalGoal || finalGoal.length < 5) { setError("Please provide a longer goal."); return; }
 
-    setError(null); setIsProcessing(true); setNarration(""); setPlan(null);
+    setError(null); setIsProcessing(true); setNarration(""); setPlan(null); setAgentNames({});
     setTaskStates({}); setTotalCostUsdc(0); setElapsedMs(0);
     runStartRef.current = Date.now();
     runAbortRef.current?.abort();
@@ -211,6 +212,14 @@ export default function StudioPage() {
 
       const data = (await res.json()) as OrchestrateResponse;
       setSessionId(data.sessionId); setPlan(data.plan);
+      setAgentNames(
+        Object.fromEntries(
+          Object.entries(data.agents ?? {}).map(([taskId, agent]) => [
+            taskId,
+            agent.name ?? agent.capability ?? "Agent pending",
+          ]),
+        ),
+      );
       setTotalCostUsdc(data.totalCostUsdc ?? 0); setNarration(data.narration ?? "");
       setElapsedMs(runStartRef.current ? Date.now() - runStartRef.current : 0);
 
@@ -328,7 +337,7 @@ export default function StudioPage() {
             <span className="text-[11px] text-ink-low/50">· Goal to tasks</span>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <PlanTree plan={plan} taskStates={taskStates} />
+            <PlanTree plan={plan} taskStates={taskStates} agentNames={agentNames} />
           </div>
         </aside>
 
@@ -402,7 +411,7 @@ export default function StudioPage() {
               <div className="rounded-md border border-white/10 bg-black/20 px-3 py-3">
                 <div className="flex items-center justify-between text-xs text-ink-low">
                   <span>Budget ceiling</span>
-                  <span className="font-mono text-ink-mid">${budgetUsdc.toFixed(3)} USDC</span>
+                  <span className="font-mono text-ink-mid">{budgetUsdc.toFixed(3)} XLM</span>
                 </div>
                 <input
                   type="range"
@@ -473,7 +482,7 @@ export default function StudioPage() {
               </div>
             </div>
             <div className="min-h-0 flex-1">
-              <AgentGraph3D plan={plan} activeTaskIds={activeTaskIds} />
+              <AgentGraph3D plan={plan} activeTaskIds={activeTaskIds} agentNames={agentNames} />
             </div>
           </div>
         </section>
@@ -496,8 +505,8 @@ export default function StudioPage() {
               {totalCostUsdc.toFixed(6)}
             </p>
             <p className="mt-2 text-xs text-ink-low">
-              Stripe minimum $0.30 · You{" "}
-              <span className="font-mono text-brand-teal">${totalCostUsdc.toFixed(6)}</span>
+              Stellar testnet fee path · You{" "}
+              <span className="font-mono text-brand-teal">{totalCostUsdc.toFixed(6)} XLM</span>
             </p>
           </div>
 

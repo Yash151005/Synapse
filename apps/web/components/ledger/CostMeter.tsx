@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export interface CostMeterProps {
   totalCostUsdc: number;
@@ -33,12 +33,6 @@ export function CostMeter({ totalCostUsdc }: CostMeterProps) {
     return () => cancelAnimationFrame(raf);
   }, [displayValue, totalCostUsdc]);
 
-  const cheaperBy = useMemo(() => {
-    const stripeMin = 0.3;
-    if (displayValue <= 0) return 0;
-    return stripeMin / displayValue;
-  }, [displayValue]);
-
   const pct = Math.min(100, (displayValue / 0.03) * 100);
 
   return (
@@ -61,13 +55,7 @@ export function CostMeter({ totalCostUsdc }: CostMeterProps) {
         />
       </div>
       <p className="mt-2 text-xs text-ink-low">
-        Stripe minimum <span className="font-mono">$0.30</span> · You <span className="font-mono text-brand-mint">${displayValue.toFixed(6)}</span>
-        {cheaperBy > 0 ? (
-          <>
-            {" "}
-            · <span className="font-mono">{cheaperBy.toFixed(1)}x</span> cheaper
-          </>
-        ) : null}
+        Stellar testnet path · You <span className="font-mono text-brand-mint">{displayValue.toFixed(6)} XLM</span>
       </p>
     </div>
   );

@@ -27,7 +27,7 @@ function downloadJson(data: unknown, filename: string) {
 }
 
 const auditEvents = [
-  { time: "10:31:12", actor: "system", event: "budget.locked", state: "cap 0.050 USDC" },
+  { time: "10:31:12", actor: "system", event: "budget.locked", state: "cap 0.050 XLM" },
   { time: "10:31:18", actor: "TaskEscrow", event: "payment.released", state: "task-02 confirmed" },
   { time: "15:02:04", actor: "reviewer", event: "dispute.opened", state: "citation mismatch" },
   { time: "15:02:48", actor: "policy", event: "payout.held", state: "evidence required" },
@@ -82,7 +82,7 @@ export default function GovernancePage() {
                     <p className="mt-1 text-xs text-ink-low">{dispute.sessionId} / due {dispute.due}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-mono text-lg text-brand-mint">${dispute.amountUsdc.toFixed(3)}</p>
+                    <p className="font-mono text-lg text-brand-mint">{dispute.amountUsdc.toFixed(3)} XLM</p>
                     <p className="text-xs text-ink-low">{dispute.status}</p>
                   </div>
                 </div>

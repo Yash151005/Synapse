@@ -27,21 +27,21 @@ const approvalQueue = [
   {
     title: "Research claim above confidence threshold",
     owner: "Owner review",
-    amount: "$0.061",
+    amount: "0.061 XLM",
     risk: 74,
     due: "12 min",
   },
   {
     title: "Provider fallback repriced by 22%",
     owner: "Budget owner",
-    amount: "$0.018",
+    amount: "0.018 XLM",
     risk: 58,
     due: "28 min",
   },
   {
     title: "Sensitive task confirmation",
     owner: "Manual approval",
-    amount: "$0.009",
+    amount: "0.009 XLM",
     risk: 67,
     due: "44 min",
   },
@@ -60,6 +60,38 @@ export default function DashboardPage() {
   const { session: authSession } = useAuth();
   const [sessions, setSessions] = useState<SessionSummaryView[]>([]);
   const [loading, setLoading] = useState(true);
+  const [setupState, setSetupState] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [setupMsg, setSetupMsg] = useState<string | null>(null);
+  const [agentCount, setAgentCount] = useState<number | null>(null);
+
+  // Check whether agents have been seeded
+  useEffect(() => {
+    const supabase = supabaseBrowser();
+    if (!supabase) return;
+    void supabase.from("agents").select("id", { count: "exact", head: true }).then(({ count }) => {
+      setAgentCount(count ?? 0);
+    });
+  }, []);
+
+  async function runSetup() {
+    setSetupState("running");
+    setSetupMsg(null);
+    try {
+      const res = await fetch("/api/setup");
+      const data = await res.json();
+      if (data.ok) {
+        setSetupState("done");
+        setAgentCount(data.agents?.seeded ?? 12);
+        setSetupMsg(`Treasury funded · ${data.agents?.seeded} agents seeded. Run a session to get real on-chain receipts.`);
+      } else {
+        setSetupState("error");
+        setSetupMsg((data.errors ?? [data.error ?? "Setup failed"]).join(", "));
+      }
+    } catch (err) {
+      setSetupState("error");
+      setSetupMsg(err instanceof Error ? err.message : "Setup request failed");
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -162,7 +194,7 @@ export default function DashboardPage() {
   const metrics = useMemo(
     () => [
       { label: "Active sessions", value: String(activeSessions), detail: `${sessions.length} total`, tone: "teal" },
-      { label: "Locked budget", value: `$${confirmedSpend.toFixed(3)}`, detail: "XLM session spend", tone: "mint" },
+      { label: "Locked budget", value: `${confirmedSpend.toFixed(3)} XLM`, detail: "XLM session spend", tone: "mint" },
       { label: "Provider SLA", value: sessions.length > 0 ? "99.9%" : "--", detail: "rolling 24 hours", tone: "violet" },
       { label: "Review queue", value: String(sessions.filter((item) => item.status === "failed").length), detail: "sessions needing attention", tone: "amber" },
     ],
@@ -183,6 +215,36 @@ export default function DashboardPage() {
         </Link>
       }
     >
+      {/* ── Setup banner — shown when no agents are seeded ── */}
+      {agentCount === 0 && setupState !== "done" && (
+        <div className={`mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border px-4 py-3 text-sm ${
+          setupState === "error" ? "border-brand-crimson/30 bg-brand-crimson/10" : "border-brand-amber/30 bg-brand-amber/10"
+        }`}>
+          <div>
+            <p className="font-semibold text-ink-high">
+              {setupState === "error" ? "Setup failed" : "No agents seeded — transactions will be simulated"}
+            </p>
+            <p className="mt-0.5 text-xs text-ink-mid">
+              {setupMsg ?? "Click setup to fund the Stellar treasury and seed 12 capability agents so real on-chain payments flow."}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => void runSetup()}
+            disabled={setupState === "running"}
+            className={setupState === "running" ? "opacity-60" : ""}
+          >
+            {setupState === "running" ? "Setting up…" : "Run setup"}
+          </Button>
+        </div>
+      )}
+      {setupState === "done" && setupMsg && (
+        <div className="mb-4 flex items-center gap-3 rounded-md border border-brand-mint/30 bg-brand-mint/10 px-4 py-3 text-sm text-brand-mint">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          {setupMsg}
+        </div>
+      )}
+
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => (
           <MetricCard key={metric.label} {...metric} />
@@ -227,7 +289,7 @@ export default function DashboardPage() {
                       <p className="mt-2 text-sm text-ink-high">{session.goal}</p>
                     </div>
                     <div className="grid grid-cols-3 gap-3 text-right text-xs">
-                      <MiniStat label="cost" value={`$${session.totalCostUsdc.toFixed(4)}`} />
+                      <MiniStat label="cost" value={`${session.totalCostUsdc.toFixed(4)} XLM`} />
                       <MiniStat label="tasks" value={String(session.tasks.length)} />
                       <MiniStat label="risk" value={`${session.riskScore}`} />
                     </div>
@@ -266,7 +328,7 @@ export default function DashboardPage() {
           <div className="mt-4 rounded-md border border-brand-mint/20 bg-brand-mint/10 p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-ink-mid">Confirmed spend</span>
-              <span className="font-mono text-xl text-brand-mint">${confirmedSpend.toFixed(4)}</span>
+              <span className="font-mono text-xl text-brand-mint">{confirmedSpend.toFixed(4)} XLM</span>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/8">
               <div className="h-full bg-brand-mint" style={{ width: `${Math.min(100, confirmedSpend * 1000)}%` }} />

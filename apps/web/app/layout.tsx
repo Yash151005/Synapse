@@ -30,12 +30,12 @@ export const metadata: Metadata = {
     template: "%s · Synapse",
   },
   description:
-    "Speak any goal. Synapse plans it, hires specialist AI agents, pays them in USDC on Stellar, and narrates the result back — all in under 60 seconds.",
+    "Speak any goal. Synapse plans it, hires specialist AI agents, pays them in XLM on Stellar, and narrates the result back — all in under 60 seconds.",
   applicationName: "Synapse",
   keywords: [
     "AI agents",
     "Stellar",
-    "USDC",
+    "XLM",
     "voice AI",
     "agentic AI",
     "blockchain payments",
@@ -44,14 +44,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Synapse — The autonomous AI economy, on-chain",
     description:
-      "Voice in. AI agents hired and paid in USDC on Stellar. Result narrated back. <60 seconds.",
+      "Voice in. AI agents hired and paid in XLM on Stellar. Result narrated back. <60 seconds.",
     type: "website",
     siteName: "Synapse",
   },
   twitter: {
     card: "summary_large_image",
     title: "Synapse — The autonomous AI economy, on-chain",
-    description: "Speak a goal → AI agents → on-chain USDC payments → answer.",
+    description: "Speak a goal → AI agents → on-chain XLM payments → answer.",
   },
 };
 

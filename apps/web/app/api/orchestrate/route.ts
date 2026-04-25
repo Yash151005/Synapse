@@ -45,6 +45,7 @@ type StrategyMode = OrchestrationRequest["strategy"];
 
 type AgentCandidate = {
   id: string;
+  name: string;
   endpoint_url: string;
   price_usdc: number;
   stellar_address: string;
@@ -68,6 +69,9 @@ async function discoverCandidateAgents(
   query: string,
 ): Promise<AgentCandidate[]> {
   const supabase = await getSupabase();
+  if (!supabase) {
+    throw new Error("Supabase is not configured");
+  }
 
   // Embed the query
   const embedRes = await fetch("https://api.openai.com/v1/embeddings", {
@@ -109,6 +113,7 @@ async function discoverCandidateAgents(
 
   return agents.map((agent) => ({
     id: agent.id,
+    name: agent.name,
     endpoint_url: agent.endpoint_url,
     price_usdc: Number(agent.price_usdc),
     stellar_address: agent.stellar_address,
@@ -260,15 +265,19 @@ export async function POST(request: NextRequest) {
     if (!supabase) {
       const demoSessionId = sessionId;
       const demoTasks = [
-        { id: "task-demo-01", capability: "research", query: goal, title: "Research goal", status: "done", max_price_usdc: 0.01, parallel_group: 0, depends_on: [], result: { summary: `Demo research result for: ${goal}` } },
-        { id: "task-demo-02", capability: "synthesis", query: goal, title: "Synthesise findings", status: "done", max_price_usdc: 0.01, parallel_group: 1, depends_on: ["task-demo-01"], result: { summary: "Demo synthesis complete." } },
+        { id: "t1", capability: "web_search", query: goal, title: "Research goal", status: "done", max_price_usdc: 0.01, parallel_group: 0, depends_on: [], result: { summary: `Demo research result for: ${goal}` } },
+        { id: "t2", capability: "fact_check", query: `Verify and refine: ${goal}`, title: "Verify findings", status: "done", max_price_usdc: 0.01, parallel_group: 1, depends_on: ["t1"], result: { summary: "Demo verification complete." } },
       ];
       return NextResponse.json({
         sessionId: demoSessionId,
-        plan: { tasks: demoTasks, narration_template: "Demo plan for: {{goal}}" },
+        plan: { summary: `Demo plan for: ${goal}`, tasks: demoTasks, narration_template: "Demo plan for: {{goal}}" },
         tasks: demoTasks,
+        agents: {
+          t1: { name: "Vector Scout", capability: "web_search", price_usdc: 0.01 },
+          t2: { name: "ClaimCheck", capability: "fact_check", price_usdc: 0.01 },
+        },
         totalCostUsdc: 0.02,
-        narration: `[Demo mode] Completed: ${goal}. Cost: $0.020000. Configure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable live execution.`,
+        narration: `[Demo mode] Completed: ${goal}. Cost: 0.020000 XLM. Configure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable live execution.`,
       });
     }
 
@@ -371,7 +380,7 @@ export async function POST(request: NextRequest) {
       });
     } catch (err) {
       console.warn("Narration generation failed:", err);
-      narrationText = `Completed: ${goal}. Cost: $${totalCostUsdc.toFixed(6)}.`;
+      narrationText = `Completed: ${goal}. Cost: ${totalCostUsdc.toFixed(6)} XLM.`;
     }
 
     // Update session as done
@@ -389,6 +398,22 @@ export async function POST(request: NextRequest) {
         ...t,
         result: agentResults[t.id],
       })),
+      agents: Object.fromEntries(
+        plan.tasks.map((t) => [
+          t.id,
+          agents[t.id]
+            ? {
+                name: agents[t.id].name,
+                capability: t.capability,
+                price_usdc: agents[t.id].price_usdc,
+              }
+            : {
+                name: `${t.capability.replace(/_/g, " ")} fallback`,
+                capability: t.capability,
+                price_usdc: 0.001,
+              },
+        ]),
+      ),
       totalCostUsdc,
       narration: narrationText,
     });

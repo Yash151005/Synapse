@@ -256,7 +256,7 @@ export default function ContractsPage() {
   function sendToStudio() {
     localStorage.setItem(
       "synapse.prefillGoal",
-      `Draft and review a ${form.type} contract with ${form.capUsdc.toFixed(3)} USDC cap, ${form.timeoutSec}s timeout, release rule "${form.releaseRule}", and refund rule "${form.refundRule}" on Stellar testnet.`,
+      `Draft and review a ${form.type} contract with ${form.capUsdc.toFixed(3)} XLM cap, ${form.timeoutSec}s timeout, release rule "${form.releaseRule}", and refund rule "${form.refundRule}" on Stellar testnet.`,
     );
     router.push("/studio");
   }
@@ -321,7 +321,7 @@ export default function ContractsPage() {
             <Field label="Payee wallet">
               <input value={form.payee} onChange={(e) => set("payee", e.target.value)} className={`${inputClass} font-mono text-xs`} />
             </Field>
-            <Field label={`Cap ${form.capUsdc.toFixed(3)} USDC`}>
+            <Field label={`Cap ${form.capUsdc.toFixed(3)} XLM`}>
               <input type="range" min={0.001} max={1} step={0.001} value={form.capUsdc} onChange={(e) => set("capUsdc", Number(e.target.value))} className="w-full accent-brand-teal" />
             </Field>
             <Field label={`Timeout ${form.timeoutSec}s`}>
@@ -432,10 +432,10 @@ export default function ContractsPage() {
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <Metric icon={<Lock className="h-5 w-5 text-brand-teal" />} label="Budget locked" value={`$${form.capUsdc.toFixed(3)}`} />
-            <Metric icon={<Wallet className="h-5 w-5 text-brand-teal" />} label="Task escrow" value={`$${lockedTotal.toFixed(4)}`} />
-            <Metric icon={<Receipt className="h-5 w-5 text-brand-teal" />} label="Released" value={`$${releasedTotal.toFixed(4)}`} />
-            <Metric icon={<Gavel className="h-5 w-5 text-brand-teal" />} label="Held" value={`$${heldTotal.toFixed(4)}`} />
+            <Metric icon={<Lock className="h-5 w-5 text-brand-teal" />} label="Budget locked" value={`${form.capUsdc.toFixed(3)} XLM`} />
+            <Metric icon={<Wallet className="h-5 w-5 text-brand-teal" />} label="Task escrow" value={`${lockedTotal.toFixed(4)} XLM`} />
+            <Metric icon={<Receipt className="h-5 w-5 text-brand-teal" />} label="Released" value={`${releasedTotal.toFixed(4)} XLM`} />
+            <Metric icon={<Gavel className="h-5 w-5 text-brand-teal" />} label="Held" value={`${heldTotal.toFixed(4)} XLM`} />
           </div>
 
           <div className="mt-4 overflow-hidden rounded-md border border-white/8 bg-bg-sunken">
