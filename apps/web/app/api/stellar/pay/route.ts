@@ -1,5 +1,5 @@
 // POST /api/stellar/pay
-// Pays an agent in USDC on Stellar testnet, persists a receipt with the
+// Pays an agent in native XLM on Stellar testnet, persists a receipt with the
 // canonical request hash bound to the on-chain memo, and returns the tx.
 //
 // Body: { sessionId, agentId, taskId, amountUsdc, requestPayload, agentAddress, fromSecret? }
@@ -12,6 +12,7 @@ import { z } from "zod";
 import { payAgent, awaitConfirmation, hashRequest } from "@/lib/stellar";
 import { stellarEnv } from "@/lib/stellar/env";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import type { Json } from "@/lib/supabase/types";
 
 export const runtime = "nodejs"; // Stellar SDK is node-only
 
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
       from_address: "PENDING",
       to_address: body.agentAddress,
       status: "pending",
-      request_payload: body.requestPayload as never,
+      request_payload: body.requestPayload as Json,
       model_used: body.modelUsed ?? null,
     })
     .select("id")

@@ -6,11 +6,10 @@
  * For each agent in seed/agents.json:
  *   1. Generate a Stellar keypair
  *   2. Friendbot-fund it
- *   3. Add USDC trustline + drip 0.1 starting USDC from issuer
- *   4. OpenAI-embed the description (1536-dim)
- *   5. Insert/upsert into Supabase `agents`, with the keypair secret
- *      stored in `metadata.secret` (hackathon scope — production would
- *      use Supabase Vault or KMS).
+ *   3. OpenAI-embed the description (1536-dim)
+ *   4. Insert/upsert into Supabase `agents`, with the keypair secret
+ *      stored in `metadata.secret` (hackathon scope - production would
+ *      use Supabase Vault or KMS)
  *
  * Re-runs are upsert-by-slug. Existing agents keep their keypairs.
  */
@@ -20,17 +19,8 @@ import path from "node:path";
 import { config as loadEnv } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
-import {
-  Asset,
-  BASE_FEE,
-  Horizon,
-  Keypair,
-  Networks,
-  Operation,
-  TransactionBuilder,
-} from "@stellar/stellar-sdk";
+import { Horizon, Keypair } from "@stellar/stellar-sdk";
 
-// Load .env.local from project root, then apps/web (last-wins).
 const ROOT = path.resolve(__dirname, "..");
 loadEnv({ path: path.join(ROOT, ".env.local") });
 loadEnv({ path: path.join(ROOT, "apps/web/.env.local") });
@@ -54,8 +44,6 @@ async function main() {
   const supabaseUrl = must("NEXT_PUBLIC_SUPABASE_URL");
   const serviceKey = must("SUPABASE_SERVICE_ROLE_KEY");
   const treasurySecret = must("PLATFORM_TREASURY_SECRET");
-  const issuerSecret = must("USDC_ISSUER_SECRET");
-  const issuerPublic = must("USDC_ISSUER_PUBLIC");
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   const supabase = createClient(supabaseUrl, serviceKey, {
@@ -63,18 +51,15 @@ async function main() {
   });
   const openai = new OpenAI({ apiKey: openaiKey });
   const horizon = new Horizon.Server(HORIZON_URL);
-  const usdc = new Asset("USDC", issuerPublic);
-  const issuer = Keypair.fromSecret(issuerSecret);
   const treasury = Keypair.fromSecret(treasurySecret);
 
   const seedFile = path.join(ROOT, "seed/agents.json");
   const agents: SeedAgent[] = JSON.parse(readFileSync(seedFile, "utf8"));
-  console.log(`→ Seeding ${agents.length} agents…`);
+  console.log(`Seeding ${agents.length} agents...`);
 
   for (const a of agents) {
     console.log(`\n[${a.slug}] ${a.name} (${a.capability})`);
 
-    // 1. Reuse existing keypair if we already inserted this slug
     const { data: existing } = await supabase
       .from("agents")
       .select("id, stellar_address, metadata")
@@ -86,7 +71,7 @@ async function main() {
       const meta = existing.metadata as Record<string, unknown>;
       if (typeof meta.secret === "string") {
         kp = Keypair.fromSecret(meta.secret);
-        console.log(`  ↳ reusing keypair ${kp.publicKey()}`);
+        console.log(`  reusing keypair ${kp.publicKey()}`);
       } else {
         kp = Keypair.random();
       }
@@ -94,48 +79,22 @@ async function main() {
       kp = Keypair.random();
     }
 
-    // 2. Fund + trust + drip (skip if already done)
     const provisioned = await isProvisioned(horizon, kp.publicKey());
     if (!provisioned) {
-      console.log(`  ↳ funding ${kp.publicKey()}…`);
+      console.log(`  funding ${kp.publicKey()}...`);
       await fundFriendbot(kp.publicKey()).catch(() => {});
-      const acc = await horizon.loadAccount(kp.publicKey());
-      const tx = new TransactionBuilder(acc, {
-        fee: BASE_FEE,
-        networkPassphrase: Networks.TESTNET,
-      })
-        .addOperation(Operation.changeTrust({ asset: usdc }))
-        .setTimeout(60)
-        .build();
-      tx.sign(kp);
-      await horizon.submitTransaction(tx);
-
-      const issAcc = await horizon.loadAccount(issuer.publicKey());
-      const dripTx = new TransactionBuilder(issAcc, {
-        fee: BASE_FEE,
-        networkPassphrase: Networks.TESTNET,
-      })
-        .addOperation(
-          Operation.payment({ destination: kp.publicKey(), asset: usdc, amount: "0.1" }),
-        )
-        .setTimeout(60)
-        .build();
-      dripTx.sign(issuer);
-      await horizon.submitTransaction(dripTx);
-      console.log(`  ↳ trustline + 0.1 USDC seeded`);
+      console.log("  testnet XLM funded");
     } else {
-      console.log(`  ↳ already provisioned, skipping Stellar setup`);
+      console.log("  already provisioned, skipping Stellar setup");
     }
 
-    // 3. Embed
-    console.log(`  ↳ embedding description…`);
+    console.log("  embedding description...");
     const emb = await openai.embeddings.create({
       model: "text-embedding-3-small",
       input: `${a.name}. ${a.description}. Capability: ${a.capability}.`,
     });
     const embedding = emb.data[0]!.embedding;
 
-    // 4. Upsert
     const endpoint_url = new URL(a.endpoint_path, baseUrl).toString();
     const { error } = await supabase.from("agents").upsert(
       {
@@ -152,17 +111,16 @@ async function main() {
       { onConflict: "slug" },
     );
     if (error) {
-      console.error(`  ✗ upsert failed: ${error.message}`);
+      console.error(`  upsert failed: ${error.message}`);
       process.exitCode = 1;
     } else {
-      console.log(`  ✔ inserted ${a.slug}`);
+      console.log(`  inserted ${a.slug}`);
     }
   }
 
-  // Suppress unused-warning on treasury — kept for parity / future fanout
   void treasury;
 
-  console.log("\n✔ Seed complete.");
+  console.log("\nSeed complete.");
 }
 
 function must(name: string, throwOnMissing = true): string {
@@ -181,15 +139,13 @@ async function fundFriendbot(pubkey: string): Promise<void> {
 async function isProvisioned(horizon: Horizon.Server, pubkey: string): Promise<boolean> {
   try {
     const acc = await horizon.loadAccount(pubkey);
-    return acc.balances.some(
-      (b) => b.asset_type !== "native" && "asset_code" in b && b.asset_code === "USDC",
-    );
+    return acc.balances.some((b) => b.asset_type === "native" && Number(b.balance) > 0);
   } catch {
     return false;
   }
 }
 
 main().catch((e) => {
-  console.error("✗ seed failed:", e);
+  console.error("seed failed:", e);
   process.exit(1);
 });

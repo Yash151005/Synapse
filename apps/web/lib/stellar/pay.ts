@@ -1,7 +1,7 @@
 // payAgent — the single function the orchestrator calls to pay a hired agent.
 //
 // Behavior:
-//   1. Build a USDC payment from `fromSecret` to `toAddress`.
+//   1. Build a native XLM payment from `fromSecret` to `toAddress`.
 //   2. Attach a Memo.hash(sha256(requestPayload)) so the payment is
 //      cryptographically bound to the request that triggered it.
 //   3. Submit to Horizon and return tx hash + ledger.
@@ -25,7 +25,7 @@ export type PayAgentInput = {
   fromSecret: string;
   /** Destination G... pubkey for the agent. */
   toAddress: string;
-  /** USDC amount as a number (will be normalized to 7 decimals). */
+  /** XLM amount as a number (will be normalized to 7 decimals). */
   amountUsdc: number;
   /** Arbitrary JSON request payload — gets sha256'd into the memo. */
   requestPayload: unknown;

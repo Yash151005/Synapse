@@ -48,7 +48,7 @@ export function CostMeter({ totalCostUsdc }: CostMeterProps) {
           session cost
         </span>
         <span className="rounded-full border border-brand-mint/30 bg-brand-mint/10 px-2 py-0.5 text-[11px] text-brand-mint">
-          USDC
+          XLM
         </span>
       </div>
       <div className="mt-2 font-mono text-4xl tabular-nums text-brand-mint">

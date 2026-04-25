@@ -5,7 +5,6 @@ export { stellarEnv, isStellarConfigured } from "./env";
 export {
   generateKeypair,
   fundViaFriendbot,
-  addUsdcTrustline,
   provisionAgentAccount,
   pubFromSecret,
   type GeneratedKeypair,

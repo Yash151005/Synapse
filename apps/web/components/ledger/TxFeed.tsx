@@ -70,7 +70,7 @@ export function TxFeed({ sessionId }: TxFeedProps) {
     if (rows.length === 0) {
       return (
         <p className="text-sm text-ink-low">
-          Waiting for confirmed payments...
+          Waiting for confirmed XLM payments...
         </p>
       );
     }

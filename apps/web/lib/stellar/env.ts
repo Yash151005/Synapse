@@ -26,22 +26,11 @@ export const stellarEnv = {
   get treasuryPublic() {
     return required("PLATFORM_TREASURY_PUBLIC", process.env.PLATFORM_TREASURY_PUBLIC);
   },
-
-  /** Our test-USDC issuer. Distinct from treasury — issuers can't hold their own asset. */
-  get usdcIssuerSecret() {
-    return required("USDC_ISSUER_SECRET", process.env.USDC_ISSUER_SECRET);
-  },
-  get usdcIssuerPublic() {
-    return required("USDC_ISSUER_PUBLIC", process.env.USDC_ISSUER_PUBLIC);
-  },
-  usdcAssetCode: process.env.USDC_ASSET_CODE ?? "USDC",
 } as const;
 
 export function isStellarConfigured(): boolean {
   return !!(
     process.env.PLATFORM_TREASURY_SECRET &&
-    process.env.PLATFORM_TREASURY_PUBLIC &&
-    process.env.USDC_ISSUER_SECRET &&
-    process.env.USDC_ISSUER_PUBLIC
+    process.env.PLATFORM_TREASURY_PUBLIC
   );
 }
