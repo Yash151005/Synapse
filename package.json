@@ -15,7 +15,10 @@
     "typecheck": "pnpm --recursive typecheck",
     "stellar:bootstrap": "pnpm --filter @synapse/web exec tsx ../../scripts/bootstrap-stellar.ts",
     "agents:seed": "pnpm --filter @synapse/web exec tsx ../../scripts/seed-agents.ts",
-    "db:migrate": "pnpm --filter @synapse/web exec tsx ../../scripts/run-migrations.ts"
+    "db:migrate": "pnpm --filter @synapse/web exec tsx ../../scripts/run-migrations.ts",
+    "contracts:test": "cargo test --manifest-path contracts/Cargo.toml",
+    "contracts:build": "cargo build --manifest-path contracts/Cargo.toml --target wasm32-unknown-unknown --release",
+    "contracts:deploy:plan": "tsx scripts/plan-contract-deploy.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

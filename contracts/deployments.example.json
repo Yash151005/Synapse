@@ -1,0 +1,15 @@
+{
+  "network": "testnet",
+  "taskEscrow": {
+    "contractId": "C...",
+    "wasm": "target/wasm32-unknown-unknown/release/task_escrow.wasm"
+  },
+  "sessionBudget": {
+    "contractId": "C...",
+    "wasm": "target/wasm32-unknown-unknown/release/session_budget.wasm"
+  },
+  "dispute": {
+    "contractId": "C...",
+    "wasm": "target/wasm32-unknown-unknown/release/dispute.wasm"
+  }
+}
