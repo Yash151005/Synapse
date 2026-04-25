@@ -1,0 +1,24 @@
+{
+  "name": "synapse",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Voice-first AI agent marketplace settling in USDC on Stellar",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:web": "pnpm --filter @synapse/web dev",
+    "dev:bridge": "pnpm --filter @synapse/voice-bridge dev",    "dev:mobile": "pnpm --filter @synapse/mobile start",    "build": "pnpm --recursive --filter \"./apps/*\" build",
+    "lint": "pnpm --recursive --filter \"./apps/*\" lint",
+    "typecheck": "pnpm --recursive typecheck",
+    "stellar:bootstrap": "pnpm --filter @synapse/web exec tsx ../../scripts/bootstrap-stellar.ts",
+    "agents:seed": "pnpm --filter @synapse/web exec tsx ../../scripts/seed-agents.ts",
+    "db:migrate": "pnpm --filter @synapse/web exec tsx ../../scripts/run-migrations.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

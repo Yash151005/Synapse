@@ -1,0 +1,216 @@
+@import "tailwindcss";
+
+/* =====================================================================
+   SYNAPSE DESIGN TOKENS — Tailwind v4 CSS-first @theme block
+   "Bloomberg Terminal meets Apple Vision Pro"
+   ===================================================================== */
+@theme {
+  /* ---- Background ladder ---- */
+  --color-bg-base:    #070A12;
+  --color-bg-raised:  #0E1320;
+  --color-bg-sunken:  #050811;
+  --color-bg-glass:   rgba(20, 27, 45, 0.6);
+
+  /* ---- Brand (NEXUS deck) ---- */
+  --color-brand-crimson: #DC2547;
+  --color-brand-teal:    #0DB4C9;
+  --color-brand-violet:  #7B5FFF;
+  --color-brand-mint:    #1FCFA0;
+  --color-brand-amber:   #F5A623;
+
+  /* ---- Text ladder ---- */
+  --color-ink-high:  #F4F6FB;
+  --color-ink-mid:   #A8B2C8;
+  --color-ink-low:   #5B677D;
+  --color-ink-faint: #2C3346;
+
+  /* ---- Type ---- */
+  --font-sans:    "Geist", "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono:    "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  --font-display: "Instrument Serif", "Georgia", serif;
+
+  /* ---- Radii ---- */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* ---- Shadows (override shadcn defaults) ---- */
+  --shadow-glass:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 20px 60px -20px rgba(0, 0, 0, 0.6);
+  --shadow-glow-crimson:
+    0 0 0 1px rgba(220, 37, 71, 0.25),
+    0 0 40px -8px rgba(220, 37, 71, 0.45);
+  --shadow-glow-teal:
+    0 0 0 1px rgba(13, 180, 201, 0.25),
+    0 0 40px -8px rgba(13, 180, 201, 0.45);
+  --shadow-glow-mint:
+    0 0 0 1px rgba(31, 207, 160, 0.25),
+    0 0 40px -8px rgba(31, 207, 160, 0.45);
+
+  /* ---- Animation timing ---- */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* =====================================================================
+   BASE LAYER — global resets and ground state
+   ===================================================================== */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html, body {
+    background: var(--color-bg-base);
+    color: var(--color-ink-high);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100vh;
+    background-image:
+      radial-gradient(1200px 800px at 80% -10%, rgba(123, 95, 255, 0.10), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(13, 180, 201, 0.08), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: rgba(220, 37, 71, 0.35);
+    color: var(--color-ink-high);
+  }
+
+  /* Numbers, hashes, addresses — always tabular */
+  .font-mono, code, kbd, samp, pre {
+    font-feature-settings: "tnum", "ss01";
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Custom scrollbar — restrained */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(168, 178, 200, 0.12);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(168, 178, 200, 0.22);
+    background-clip: padding-box;
+  }
+}
+
+/* =====================================================================
+   COMPONENTS — reusable Synapse primitives
+   ===================================================================== */
+@layer components {
+  /* The signature glassmorphism surface */
+  .glass {
+    background: var(--color-bg-glass);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-glass);
+  }
+
+  /* Subtle dot grid backdrop with cursor-followed spotlight */
+  .grid-bg {
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(168, 178, 200, 0.06) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+
+  .spotlight {
+    position: relative;
+    isolation: isolate;
+  }
+  .spotlight::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(
+      600px circle at var(--spot-x, 50%) var(--spot-y, 0%),
+      rgba(220, 37, 71, 0.10),
+      transparent 40%
+    );
+    pointer-events: none;
+    z-index: -1;
+    transition: background 200ms var(--ease-out-expo);
+  }
+
+  /* Button reset that we layer variants on top of */
+  .btn-reset {
+    appearance: none;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Hairline divider used between dense data rows */
+  .hairline {
+    border-color: rgba(255, 255, 255, 0.04);
+  }
+}
+
+/* =====================================================================
+   UTILITIES — micro animations powering the demo
+   ===================================================================== */
+@layer utilities {
+  .animate-pulse-soft {
+    animation: pulse-soft 2.6s var(--ease-in-out-quart) infinite;
+  }
+  .animate-orbit {
+    animation: orbit 18s linear infinite;
+  }
+  .animate-shimmer {
+    background: linear-gradient(
+      110deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.06) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+  .animate-flow {
+    animation: flow 1.8s linear infinite;
+  }
+
+  /* Mask helpers used by graph edges & ledger fades */
+  .mask-fade-b {
+    mask-image: linear-gradient(to bottom, black 60%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent);
+  }
+  .mask-fade-t {
+    mask-image: linear-gradient(to top, black 60%, transparent);
+    -webkit-mask-image: linear-gradient(to top, black 60%, transparent);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.04); }
+}
+@keyframes orbit {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+@keyframes flow {
+  from { stroke-dashoffset: 24; }
+  to   { stroke-dashoffset: 0; }
+}

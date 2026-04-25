@@ -1,0 +1,110 @@
+[
+  {
+    "slug": "skyscout",
+    "name": "SkyScout",
+    "capability": "flights",
+    "description": "Live flight search across major airlines. Returns price, airline, departure/arrival, and stops for the cheapest viable options on any route.",
+    "endpoint_path": "/api/agents/flights",
+    "price_usdc": 0.005,
+    "metadata": { "icon": "plane", "color": "crimson" }
+  },
+  {
+    "slug": "stayfinder",
+    "name": "StayFinder",
+    "capability": "hotels",
+    "description": "Hotel and accommodation finder with prices, ratings, and amenities. Surfaces beachfront, business, and budget options based on user intent.",
+    "endpoint_path": "/api/agents/hotels",
+    "price_usdc": 0.005,
+    "metadata": { "icon": "bed", "color": "violet" }
+  },
+  {
+    "slug": "skywatch",
+    "name": "SkyWatch",
+    "capability": "weather",
+    "description": "Real-time weather conditions and 7-day forecasts for any city or coordinate. Highlights rain, temperature ranges, and travel-relevant alerts.",
+    "endpoint_path": "/api/agents/weather",
+    "price_usdc": 0.001,
+    "metadata": { "icon": "cloud-sun", "color": "teal" }
+  },
+  {
+    "slug": "websleuth",
+    "name": "WebSleuth",
+    "capability": "web_search",
+    "description": "Real-time web search with answer extraction. Cites sources and produces a 1–2 sentence direct answer suitable for spoken narration.",
+    "endpoint_path": "/api/agents/web_search",
+    "price_usdc": 0.003,
+    "metadata": { "icon": "search", "color": "amber" }
+  },
+  {
+    "slug": "geomarker",
+    "name": "GeoMarker",
+    "capability": "geocoding",
+    "description": "Convert place names to GPS coordinates and vice versa. Supports landmarks, neighborhoods, and partial matches for fuzzy queries.",
+    "endpoint_path": "/api/agents/geocoding",
+    "price_usdc": 0.001,
+    "metadata": { "icon": "map-pin", "color": "mint" }
+  },
+  {
+    "slug": "fxpilot",
+    "name": "FXPilot",
+    "capability": "currency",
+    "description": "Live currency conversion using current FX rates across 150+ currencies. Returns rate, converted amount, and rate timestamp.",
+    "endpoint_path": "/api/agents/currency",
+    "price_usdc": 0.001,
+    "metadata": { "icon": "coins", "color": "mint" }
+  },
+  {
+    "slug": "polyglot",
+    "name": "Polyglot",
+    "capability": "translation",
+    "description": "High-quality translation between 50+ languages with tone preservation. Optimized for travel-friendly phrases and natural spoken delivery.",
+    "endpoint_path": "/api/agents/translation",
+    "price_usdc": 0.002,
+    "metadata": { "icon": "languages", "color": "violet" }
+  },
+  {
+    "slug": "newsbeat",
+    "name": "NewsBeat",
+    "capability": "news",
+    "description": "Latest news headlines and AI-summarized briefings on any topic. Filters for relevance and recency, returning 3-bullet summaries.",
+    "endpoint_path": "/api/agents/news",
+    "price_usdc": 0.002,
+    "metadata": { "icon": "newspaper", "color": "amber" }
+  },
+  {
+    "slug": "moodread",
+    "name": "MoodRead",
+    "capability": "sentiment",
+    "description": "Sentiment, tone, and emotion analysis for text or social posts. Returns polarity, confidence, and dominant emotional signals.",
+    "endpoint_path": "/api/agents/sentiment",
+    "price_usdc": 0.001,
+    "metadata": { "icon": "smile", "color": "teal" }
+  },
+  {
+    "slug": "pixelforge",
+    "name": "PixelForge",
+    "capability": "image_gen",
+    "description": "Generate images from natural-language prompts. Suitable for marketing visuals, mockups, and concept art at multiple resolutions.",
+    "endpoint_path": "/api/agents/image_gen",
+    "price_usdc": 0.008,
+    "metadata": { "icon": "image", "color": "crimson" }
+  },
+  {
+    "slug": "veritas",
+    "name": "Veritas",
+    "capability": "fact_check",
+    "description": "Verify factual claims against authoritative sources. Returns verdict (true/false/mixed/unverified) plus 2–3 source citations.",
+    "endpoint_path": "/api/agents/fact_check",
+    "price_usdc": 0.003,
+    "metadata": { "icon": "shield-check", "color": "mint" }
+  },
+  {
+    "slug": "calendly",
+    "name": "Calendly",
+    "capability": "calendar",
+    "description": "Reason over calendars and time slots — find free windows, propose meeting times across timezones, or build a day plan from constraints.",
+    "endpoint_path": "/api/agents/calendar",
+    "price_usdc": 0.002,
+    "metadata": { "icon": "calendar", "color": "violet" }
+  }
+]

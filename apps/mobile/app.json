@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "Synapse",
+    "slug": "synapse-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "auto",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTabletMode": true,
+      "bundleIdentifier": "app.synapse.mobile",
+      "buildNumber": "1"
+    },
+    "android": {
+      "package": "app.synapse.mobile",
+      "versionCode": 1,
+      "permissions": ["android.permission.RECORD_AUDIO", "android.permission.ACCESS_FINE_LOCATION"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Synapse to use Face ID"
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Synapse to access your microphone for voice commands.",
+          "audioAmbient": false
+        }
+      ]
+    ],
+    "scheme": "synapse",
+    "owner": "synapse"
+  }
+}
