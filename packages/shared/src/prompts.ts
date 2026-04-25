@@ -1,4 +1,4 @@
-import { CAPABILITIES, CAPABILITY_DESCRIPTIONS } from "./capabilities.js";
+import { CAPABILITIES, CAPABILITY_DESCRIPTIONS } from "./capabilities";
 
 /**
  * The ONE prompt that decides whether Synapse looks intelligent.

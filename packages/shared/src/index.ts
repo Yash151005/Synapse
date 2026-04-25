@@ -1,6 +1,6 @@
-export * from "./capabilities.js";
-export * from "./schemas.js";
-export * from "./prompts.js";
+export * from "./capabilities";
+export * from "./schemas";
+export * from "./prompts";
 
 /** Network/protocol constants — single source of truth */
 export const STELLAR_TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";

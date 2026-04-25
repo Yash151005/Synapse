@@ -1,11 +1,3 @@
-/**
- * components/voice/VoiceOrb.tsx — Animated voice input orb with audio reactivity
- * 
- * The signature UI element. Pulses with gradient (crimson → violet).
- * Reacts to microphone input amplitude via Web Audio API.
- * Pulsates during agent execution (teal).
- */
-
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -24,187 +16,130 @@ export function VoiceOrb({
   disabled = false,
   onClick,
 }: VoiceOrbProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [pulse, setPulse] = useState(1);
+  const rafRef = useRef<number | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const animationIdRef = useRef<number>();
-  const [amplitude, setAmplitude] = useState(0);
 
-  // Set up audio input during listening state
+  // Mic amplitude → pulse scale
   useEffect(() => {
-    if (!isListening) return;
+    if (!isListening) {
+      setPulse(1);
+      return;
+    }
 
-    const setupAudio = async () => {
+    let cancelled = false;
+
+    const setup = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
-
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        audioContextRef.current = audioContext;
-
-        const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
+        const ctx = new AudioContext();
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 64;
         analyserRef.current = analyser;
-
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-        const updateAmplitude = () => {
-          analyser.getByteFrequencyData(dataArray);
-          const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-          setAmplitude(average / 255); // Normalize to 0–1
-          animationIdRef.current = requestAnimationFrame(updateAmplitude);
+        ctx.createMediaStreamSource(stream).connect(analyser);
+        const buf = new Uint8Array(analyser.frequencyBinCount);
+        const tick = () => {
+          analyser.getByteFrequencyData(buf);
+          const avg = buf.reduce((a, b) => a + b, 0) / buf.length / 255;
+          setPulse(1 + avg * 0.35);
+          rafRef.current = requestAnimationFrame(tick);
         };
-
-        updateAmplitude();
-      } catch (err) {
-        console.error("Microphone access failed:", err);
+        rafRef.current = requestAnimationFrame(tick);
+      } catch {
+        /* mic denied — no pulse */
       }
     };
 
-    setupAudio();
+    void setup();
 
     return () => {
-      if (animationIdRef.current) {
-        cancelAnimationFrame(animationIdRef.current);
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-      }
+      cancelled = true;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      analyserRef.current = null;
+      streamRef.current = null;
     };
   }, [isListening]);
 
-  // Canvas animation loop for visual feedback
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const baseRadius = 60;
-      const radiusVariation = baseRadius * 0.2 * amplitude;
-
-      // Outer glow ring
-      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, baseRadius + radiusVariation + 20);
-      if (isProcessing) {
-        gradient.addColorStop(0, "rgba(13, 180, 201, 0.3)");
-        gradient.addColorStop(0.5, "rgba(13, 180, 201, 0.1)");
-        gradient.addColorStop(1, "rgba(13, 180, 201, 0)");
-      } else if (isListening) {
-        gradient.addColorStop(0, "rgba(220, 37, 71, 0.3)");
-        gradient.addColorStop(0.5, "rgba(123, 95, 255, 0.1)");
-        gradient.addColorStop(1, "rgba(123, 95, 255, 0)");
-      } else {
-        gradient.addColorStop(0, "rgba(13, 180, 201, 0.2)");
-        gradient.addColorStop(1, "rgba(13, 180, 201, 0)");
-      }
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, baseRadius + radiusVariation + 20, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Main orb
-      const orbGradient = ctx.createRadialGradient(centerX - 10, centerY - 10, 10, centerX, centerY, baseRadius);
-      if (isProcessing) {
-        orbGradient.addColorStop(0, "#1FCFA0");
-        orbGradient.addColorStop(1, "#0DB4C9");
-      } else {
-        orbGradient.addColorStop(0, "#DC2547");
-        orbGradient.addColorStop(1, "#7B5FFF");
-      }
-      ctx.fillStyle = orbGradient;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, baseRadius + radiusVariation, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Highlight for depth
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(centerX - 15, centerY - 15, baseRadius + radiusVariation - 10, 0, Math.PI * 2);
-      ctx.stroke();
-
-      requestAnimationFrame(animate);
-    };
-
-    const id = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(id);
-  }, [isListening, isProcessing, amplitude]);
+  const label = isProcessing ? "Executing..." : isListening ? "Listening..." : "Tap to speak";
 
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "relative inline-flex h-60 w-60 items-center justify-center rounded-full transition-all",
-        isListening || isProcessing ? "ring-4 ring-brand-violet/50" : "",
-        disabled ? "opacity-50 cursor-not-allowed" : "hover:scale-105 active:scale-95 cursor-pointer",
-      )}
-    >
-      {/* Canvas for real-time animation */}
-      <canvas
-        ref={canvasRef}
-        width={240}
-        height={240}
-        className="absolute inset-0 rounded-full"
-      />
+    <div className="flex flex-col items-center gap-10">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={cn(
+          "relative flex h-[152px] w-[152px] items-center justify-center rounded-full",
+          "transition-transform duration-150",
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:scale-[1.04] active:scale-95",
+        )}
+        style={{ transform: `scale(${pulse})` }}
+      >
+        {/* Glow halo */}
+        <span
+          className={cn(
+            "absolute inset-[-10px] rounded-full blur-xl opacity-40 transition-opacity duration-500",
+            isProcessing
+              ? "bg-brand-teal animate-pulse"
+              : isListening
+                ? "bg-brand-crimson animate-pulse"
+                : "bg-brand-violet",
+          )}
+        />
 
-      {/* Icon overlay */}
-      <div className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full bg-bg-base">
-        {isProcessing ? (
-          <svg
-            className="h-10 w-10 animate-spin text-brand-teal"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <circle cx="12" cy="12" r="10" strokeWidth="2" opacity="0.25" />
-            <path
-              d="M4 12a8 8 0 018-8v0m0 16v0a8 8 0 01-8-8m16 0a8 8 0 01-8 8m0-16v0a8 8 0 018 8"
-              strokeWidth="2"
-            />
-          </svg>
-        ) : isListening ? (
-          <svg
-            className="h-10 w-10 text-brand-crimson"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-            <path d="M17 16.91c-1.48 1.46-3.77 2.39-6 2.39s-4.52-.93-6-2.39M9 18.9v2.01M15 18.9v2.01" />
-          </svg>
-        ) : (
-          <svg
-            className="h-10 w-10 text-brand-crimson"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
+        {/* Gradient ring */}
+        <span
+          className={cn(
+            "absolute inset-0 rounded-full",
+            isProcessing
+              ? "bg-[conic-gradient(from_180deg,#0DB4C9,#1FCFA0,#0DB4C9)]"
+              : "bg-[conic-gradient(from_180deg,#7B5FFF,#DC2547,#9B6DFF,#7B5FFF)]",
+          )}
+        />
+
+        {/* Inner dark circle */}
+        <span className="absolute inset-[6px] rounded-full bg-bg-base" />
+
+        {/* Icon */}
+        <span className="relative z-10 flex h-16 w-16 items-center justify-center">
+          {isProcessing ? (
+            <svg
+              className="h-9 w-9 animate-spin text-brand-teal"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <circle cx="12" cy="12" r="10" strokeWidth="2" opacity="0.25" />
+              <path
+                d="M4 12a8 8 0 018-8"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : (
+            // Synapse brand mark — triangle/pin
+            <svg
+              className={cn("h-9 w-9", isListening ? "text-brand-crimson" : "text-brand-crimson")}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth={1.6}
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8m0 8a8 8 0 100-16 8 8 0 000 16z"
-            />
-          </svg>
-        )}
-      </div>
+            >
+              <path d="M12 2L2 20h20L12 2z" />
+              <path d="M12 10v4" />
+              <path d="M12 18h.01" />
+            </svg>
+          )}
+        </span>
+      </button>
 
-      {/* Status text */}
-      <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap text-center">
-        <p className="text-sm font-semibold text-ink-mid">
-          {isProcessing ? "Executing..." : isListening ? "Listening..." : "Tap to speak"}
-        </p>
-      </div>
-    </button>
+      <p className="text-sm font-semibold text-ink-mid">{label}</p>
+    </div>
   );
 }

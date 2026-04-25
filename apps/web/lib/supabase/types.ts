@@ -43,6 +43,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["agents"]["Insert"]>;
+        Relationships: [];
       };
       sessions: {
         Row: {
@@ -61,11 +62,24 @@ export interface Database {
           created_at: string;
           completed_at: string | null;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["sessions"]["Row"],
-          "id" | "created_at" | "total_cost_usdc"
-        > & { id?: string; created_at?: string; total_cost_usdc?: number };
-        Update: Partial<Database["public"]["Tables"]["sessions"]["Insert"]>;
+        Insert: {
+          id?: string;
+          user_address?: string | null;
+          goal: string;
+          transcript?: Json | null;
+          plan?: Json | null;
+          status?: "planning" | "executing" | "done" | "failed" | "halted";
+          total_cost_usdc?: number;
+          budget_usdc?: number | null;
+          duration_ms?: number | null;
+          narration_text?: string | null;
+          narration_audio_url?: string | null;
+          error?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["sessions"]["Row"]>;
+        Relationships: [];
       };
       receipts: {
         Row: {
@@ -87,11 +101,27 @@ export interface Database {
           created_at: string;
           confirmed_at: string | null;
         };
-        Insert: Omit<
-          Database["public"]["Tables"]["receipts"]["Row"],
-          "id" | "created_at"
-        > & { id?: string; created_at?: string };
-        Update: Partial<Database["public"]["Tables"]["receipts"]["Insert"]>;
+        Insert: {
+          id?: string;
+          session_id: string;
+          agent_id: string;
+          task_id: string;
+          amount_usdc: number;
+          request_hash: string;
+          stellar_tx_hash: string;
+          stellar_ledger?: number | null;
+          from_address: string;
+          to_address: string;
+          status?: "pending" | "confirmed" | "failed";
+          request_payload?: Json | null;
+          response_payload?: Json | null;
+          latency_ms?: number | null;
+          model_used?: string | null;
+          created_at?: string;
+          confirmed_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["receipts"]["Row"]>;
+        Relationships: [];
       };
     };
     Views: {
@@ -108,6 +138,7 @@ export interface Database {
           jobs_24h: number;
           avg_latency_24h_ms: number;
         };
+        Relationships: [];
       };
     };
     Functions: {
@@ -133,5 +164,7 @@ export interface Database {
         }[];
       };
     };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 }

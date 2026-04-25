@@ -14,11 +14,17 @@ export default function LandingPage() {
           <Badge tone="teal" className="ml-2">testnet</Badge>
         </Link>
         <div className="flex items-center gap-2">
-          <Link href="/marketplace">
+          <Link href="/dashboard" className="hidden md:block">
+            <Button variant="ghost" size="sm">Dashboard</Button>
+          </Link>
+          <Link href="/marketplace" className="hidden md:block">
             <Button variant="ghost" size="sm">Marketplace</Button>
           </Link>
-          <Link href="/developer">
+          <Link href="/developer" className="hidden lg:block">
             <Button variant="ghost" size="sm">Publish an agent</Button>
+          </Link>
+          <Link href="/auth">
+            <Button variant="outline" size="sm">Sign in</Button>
           </Link>
           <Link href="/studio">
             <Button variant="primary" size="sm" className="ml-2">

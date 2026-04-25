@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CAPABILITIES } from "./capabilities.js";
+import { CAPABILITIES } from "./capabilities";
 
 /**
  * Schemas shared by the planner, the orchestrator, and the UI.

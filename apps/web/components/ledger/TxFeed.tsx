@@ -25,6 +25,7 @@ export function TxFeed({ sessionId }: TxFeedProps) {
     }
 
     const supabase = supabaseBrowser();
+    if (!supabase) return;
 
     const loadInitial = async () => {
       const { data } = await supabase
@@ -101,14 +102,12 @@ export function TxFeed({ sessionId }: TxFeedProps) {
   }, [rows, sessionId]);
 
   return (
-    <div className="glass flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-white/5 px-5 py-3">
-        <span className="text-[11px] uppercase tracking-[0.18em] text-ink-low">
-          ledger feed
-        </span>
-        <span className="font-mono text-[11px] text-ink-low">testnet</span>
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between px-5 py-4">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-ink-low">Ledger Feed</p>
+        <span className="text-[11px] text-ink-low">testnet</span>
       </div>
-      <div className="flex-1 overflow-auto px-4 py-3">{content}</div>
+      <div className="flex-1 overflow-auto px-5 pb-4 text-sm">{content}</div>
     </div>
   );
 }
