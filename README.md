@@ -200,3 +200,7 @@ pnpm dev:bridge
 ## Status
 
 Synapse is optimized for hackathon demo velocity with production-oriented architecture and verifiable on-chain settlement.
+
+## Detailed Roadmap
+
+For the complete proposed feature catalog, application flows, and contract rollout plan, see FEATURES.md.

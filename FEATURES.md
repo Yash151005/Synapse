@@ -1,268 +1,261 @@
-# ✅ SYNAPSE — Feature Checklist
+# Synapse Feature Catalog (Complete Proposed List)
 
-**Status:** COMPLETE & READY FOR DEMO
+This document is the complete feature proposal baseline for Synapse.
 
----
+Status legend:
+- [x] Live now
+- [~] In progress
+- [ ] Proposed
 
-## 🎤 Voice & Audio Features
+## 1) Voice and Studio
 
-- [x] Web Audio API microphone input (amplitude analysis for reactive UI)
-- [x] Web Speech API recognition (fallback text input always available)
-- [x] OpenAI Realtime WebSocket streaming (real-time transcription)
-- [x] Fastify WS bridge proxy (handles persistent WebSocket → OpenAI)
-- [x] OpenAI TTS narration (stream audio output back to browser)
-- [x] Voice Orb animation (canvas-based, reacts to mic amplitude)
-- [x] Push-to-talk (hold spacebar) with visual feedback
-- [x] Voice cloning ready (hook for ElevenLabs in place)
+- [x] Voice input via browser mic
+- [x] Text fallback goal input
+- [x] Push-to-talk interaction
+- [x] Reactive voice orb visualization
+- [x] Session narration text output
+- [x] Basic narration playback
+- [~] Quick demo goal presets
+- [ ] Real-time transcript timeline with confidence heatmap
+- [ ] Multi-language voice input and narration
+- [ ] Voice command history with one-click rerun
+- [ ] Interrupt-and-replan while tasks are running
+- [ ] Context carry-over between sessions
+- [ ] Narration persona switcher (concise, executive, technical)
+- [ ] Live planner thought stream panel
+- [ ] Demo hotkeys (run, replay, mute, reset)
+- [ ] Accessibility mode (captions, reduced motion, high contrast)
+- [ ] Session bookmarks and clip export
 
----
+## 2) Planning and Orchestration
 
-## 🧠 AI & Orchestration
+- [x] Goal decomposition into tasks
+- [x] Parallel group execution support
+- [x] Task dependency handling
+- [x] Multi-LLM routing (planner vs executor)
+- [x] Task-level execution results collection
+- [~] Budget slider at run time
+- [ ] Planner confidence score per task
+- [ ] Risk flagging for uncertain tasks
+- [ ] Alternate plan generation and compare mode
+- [ ] Strategy modes (cheapest, fastest, balanced)
+- [ ] Deadline-aware planning mode
+- [ ] Automatic fallback agent routing
+- [ ] Retry policy with backoff and circuit breaker
+- [ ] Partial-success completion UX and policy
+- [ ] Agent selection explainability panel
+- [ ] Dynamic repricing and user confirmation policy
 
-- [x] Claude Sonnet 4.5 planner (decomposes goal → tasks + narration template)
-- [x] Llama 3.3 70B executor (generates agent responses for all 12 capabilities)
-- [x] OpenAI Realtime for voice I/O only (prevents lock-in)
-- [x] Multi-LLM routing (Claude for planning, Llama for parallel execution, OpenAI for voice)
-- [x] Task dependency tracking (respects parallel_group + depends_on)
-- [x] Parallel task execution (discover + execute up to N agents simultaneously)
-- [x] Narration generation (template + results → final spoken text)
-- [x] Agent discovery via pgvector semantic search (OpenAI embeddings + cosine similarity)
-- [x] Task context passing (results from previous tasks → next task input)
+## 3) Marketplace and Provider Discovery
 
----
+- [x] Agent listing grid
+- [x] Capability and text search
+- [x] Price and reputation display
+- [~] Capability filters and sort controls
+- [ ] Capability taxonomy and subcategory model
+- [ ] Verified provider badges
+- [ ] Provider benchmark cards (latency, success, cost)
+- [ ] Region and data residency routing controls
+- [ ] Agent versioning and rollback
+- [ ] Provider changelog and maintenance windows
+- [ ] Featured collections by workflow type
+- [ ] Marketplace leaderboard views
+- [ ] SLA and health status badges
+- [ ] Provider onboarding wizard with staged validation
+- [ ] Per-capability quality scorecards
 
-## ⛓️ Blockchain & Payments
+## 4) Payments, Ledger, and Receipts
 
-- [x] Stellar SDK integration (v13.0.0)
-- [x] Stellar Testnet setup (Horizon configured)
-- [x] Treasury keypair generation (server-side payment signer)
-- [x] Issuer keypair generation (USDC trustline management)
-- [x] Friendbot funding (bootstrap keypairs with XLM)
-- [x] USDC trustline creation (both treasury + all agents)
-- [x] Autonomous payment signing (no user interaction required)
-- [x] Memo binding (sha256(request) → Stellar tx memo field)
-- [x] Payment verification (request_hash matches on-chain memo)
-- [x] Horizon polling (wait for tx confirmation, max 30s timeout)
-- [x] Receipt storage (DB persistence of all txs)
-- [x] Freighter wallet integration (optional user co-signing)
-- [x] Guest mode fallback (works even without Freighter extension)
+- [x] Task-level Stellar payment submission
+- [x] Confirmation polling and receipt persistence
+- [x] Explorer deep links in ledger feed
+- [x] Request hash binding in memo pathway
+- [~] Live cost meter UX
+- [ ] Task-level escrow release contracts
+- [ ] Session budget lock contract
+- [ ] Split payouts for composite task bundles
+- [ ] Auto-refund on timeout/failure rules
+- [ ] Sponsor mode for onboarding users
+- [ ] Live FX conversion in cost meter
+- [ ] Fee forecast and cap warning panel
+- [ ] Guest wallet with enforceable spend limits
+- [ ] Scheduled and batched provider payouts
+- [ ] Receipt verification panel with hash compare UI
 
----
+## 5) Trust, Safety, and Governance
 
-## 🎨 UI/UX Features
+- [x] Basic validated request and response schema layer
+- [ ] Composite reputation model (quality, latency, disputes)
+- [ ] Dispute flow with evidence bundles
+- [ ] Endpoint risk scoring and anomaly detection
+- [ ] Content safety filter chain before narration
+- [ ] Sensitive action confirmation gate
+- [ ] Full audit log of state transitions
+- [ ] Compliance export pack (session + receipt proof)
+- [ ] SLA policy templates per provider tier
+- [ ] Governance controls for marketplace policy
+- [ ] Incident review and remediation dashboard
 
-- [x] Dark theme glassmorphism design (bg-base, bg-raised, bg-glass)
-- [x] Custom Tailwind design tokens (colors, animations, shadows)
-- [x] Landing page hero (tagline, CTAs, trust indicators)
-- [x] Voice studio page (hero page for judges)
-- [x] Agent marketplace page (search, grid, filters)
-- [x] Session detail page (receipts, timeline, verifiable txs)
-- [x] Developer publish page (skeleton)
-- [x] Real-time cost meter (6-decimal USDC ticking)
-- [x] Plan tree visualization (task DAG with state colors)
-- [x] Agent graph 3D (r3f force-directed, ready for animation)
-- [x] Tx feed live updates (Supabase Realtime subscriptions ready)
-- [x] Loading states (skeletons, spinners)
-- [x] Error states (fallback text input, graceful degradation)
-- [x] Mobile responsive (Tailwind breakpoints, works on phones)
-- [x] Smooth animations (Framer Motion integrated)
-- [x] Glassmorphism cards (backdrop blur, subtle shadows)
+## 6) Developer Platform and Provider Experience
 
----
+- [x] Capability endpoint contract via shared schemas
+- [x] Seed script for demo agents
+- [x] Bootstrap script for Stellar setup
+- [ ] Agent SDK (typescript starter)
+- [ ] Local simulator for provider endpoints
+- [ ] Contract-aware integration test harness
+- [ ] Sandbox mode with synthetic billing and mock receipts
+- [ ] Provider webhooks (task.started, task.paid, task.failed)
+- [ ] Provider earnings and retention analytics
+- [ ] Billing statements and payout exports
+- [ ] Staging-to-production promotion pipeline
+- [ ] Endpoint health monitor and alerting
+- [ ] Auto-generated API docs from schema
+- [ ] Capability starter templates by category
 
-## 📱 Mobile Features
+## 7) Session Timeline and Replay
 
-- [x] Expo React Native app structure
-- [x] NativeWind (Tailwind for React Native)
-- [x] Bottom tab navigation (Home, Agents, Settings)
-- [x] Stack navigator wrapper
-- [x] Audio permissions (iOS + Android declared)
-- [x] Camera/location permissions (declared)
-- [x] Assets directory (ready for app icons/splashes)
-- [x] Environment configuration (.env.local.example)
-- [x] Stellar SDK polyfills (for React Native)
+- [x] Session detail view
+- [x] Receipt list and tx links
+- [ ] Time-travel replay scrubber
+- [ ] Judge proof mode UI
+- [ ] Run-vs-run comparison for same goal
+- [ ] Session cloning for deterministic demo runs
+- [ ] Annotated share links and comments
+- [ ] PDF and JSON proof export
+- [ ] Playback speed and focus filters
+- [ ] Plan revision timeline
+- [ ] Session privacy controls
+- [ ] Searchable session archive index
 
----
+## 8) Mobile App Expansion
 
-## 🗄️ Database & Backend
+- [x] Expo skeleton with navigation
+- [x] Environment scaffolding for mobile runtime
+- [ ] Push notifications for task completion
+- [ ] Lock-screen quick actions
+- [ ] Offline queue with deferred sync
+- [ ] Deep-link wallet connect flow
+- [ ] Biometric confirmation for critical actions
+- [ ] Operator mode with compact live feed
+- [ ] Agent watchlist and price alerts
+- [ ] Session replay support on mobile
+- [ ] Provider dashboard in mobile app
 
-- [x] Supabase PostgreSQL setup
-- [x] pgvector extension (semantic search)
-- [x] agents table (12 demo agents + embeddings)
-- [x] sessions table (goal, plan, state, cost)
-- [x] receipts table (Stellar tx proof per agent call)
-- [x] RLS policies (read-all, write via service role)
-- [x] Realtime subscriptions (enabled on receipts table)
-- [x] Schema migrations (0001_init.sql complete)
-- [x] Type-safe Zod schemas (@synapse/shared)
-- [x] Next.js Server Actions (for mutations)
+## 9) Growth and Business
 
----
+- [ ] Referral and affiliate model
+- [ ] Trial credits and per-agent coupons
+- [ ] Team plans with budgets and seats
+- [ ] Enterprise private marketplace
+- [ ] White-label orchestration API
+- [ ] Public status page with SLA
+- [ ] Revenue-share policy contracts
+- [ ] Provider promotion placements
+- [ ] Integration packs (CRM/ticketing)
+- [ ] Localization and regional launch kits
 
-## 🔌 API Endpoints
+## 10) Application Flows (Complete List)
 
-- [x] POST /api/orchestrate (413 lines, complete pipeline)
-- [x] GET /api/agents/discover (pgvector semantic search)
-- [x] POST /api/agents/[capability] (mock Llama execution)
-- [x] POST /api/stellar/pay (payment execution)
-- [x] GET /health (voice bridge readiness)
-- [x] WS /ws/realtime (OpenAI Realtime proxy)
+### A) Voice Goal to Settled Session
+1. User submits goal by voice or text.
+2. Planner generates task DAG.
+3. Discovery selects candidate agents.
+4. Execution runs by dependency groups.
+5. Payment settles per task and receipts are stored.
+6. Narration is generated and returned.
+7. Session timeline and proof are available.
 
----
+### B) Provider Onboarding
+1. Provider submits capability, endpoint, pricing, SLA.
+2. Validation and synthetic test calls run.
+3. Wallet and payout setup is completed.
+4. Registry entry is created.
+5. Listing is published and monitored.
 
-## 📚 Documentation
+### C) Contract Creation
+1. Draft contract from provider or admin flow.
+2. Select contract type (escrow, SLA, subscription, dispute-enabled).
+3. Define terms (payer, payee, cap, timeout, success criteria).
+4. Configure request/response hash binding.
+5. Generate metadata and version hash.
+6. Deploy contract.
+7. Link contract to listing/session policy.
+8. Execute verification transaction.
+9. Activate contract.
 
-- [x] README.md (500+ lines, comprehensive guide)
-- [x] .env.local.example (100+ lines, setup instructions)
-- [x] JUDGES_GUIDE.md (250+ lines, how to demo)
-- [x] QUICKSTART.md (bootstrap script guide)
-- [x] BUILD_COMPLETE.md (this session summary)
-- [x] Feature checklist (this file)
-- [x] Architecture diagrams (in README)
-- [x] Demo script with exact timing (in JUDGES_GUIDE)
-- [x] Bootstrap workflow steps (in .env.local.example)
-- [x] Troubleshooting guide (in README)
+### D) Task Escrow
+1. Session budget is locked.
+2. Task escrow allocation is created.
+3. Agent executes task.
+4. Success verification runs.
+5. Release or refund is executed.
+6. Receipt event is emitted and indexed.
 
----
+### E) Dispute and Arbitration
+1. User raises dispute.
+2. Evidence package is auto-collected.
+3. Hold is placed on unsettled payout.
+4. Arbitration policy resolves outcome.
+5. Release, split, or refund is executed.
+6. Reputation and metrics are updated.
 
-## 🛠️ Development Scripts
+### F) Provider Payout
+1. Confirmed balance accrues.
+2. Provider triggers payout or auto-sweep.
+3. Holdbacks and disputes are checked.
+4. Net payout settles.
+5. Statement and export entries are generated.
 
-- [x] pnpm install (installs all dependencies)
-- [x] pnpm dev:web (starts Next.js on :3000)
-- [x] pnpm dev:bridge (starts Fastify on :8080)
-- [x] pnpm dev:mobile (starts Expo)
-- [x] pnpm build (production builds)
-- [x] pnpm typecheck (TypeScript validation)
-- [x] pnpm lint (ESLint)
-- [x] pnpm stellar:bootstrap (generates keys + USDC)
-- [x] pnpm agents:seed (seeds 12 demo agents)
+### G) Replay and Verification
+1. Session is opened in replay mode.
+2. Timeline rehydrates from events.
+3. Planner, task, payment, narration replay is rendered.
+4. Explorer links and hash proofs are displayed.
+5. Proof packet export is generated.
 
----
+### H) Failure Recovery
+1. Task timeout or failure occurs.
+2. Retry policy applies.
+3. Fallback provider may be selected.
+4. Partial completion policy determines continuation.
+5. Settlement ensures no duplicate payment.
 
-## 🧪 Tested Flows
+### I) Enterprise Approval
+1. Goal is submitted under team policy.
+2. Budget and risk guard checks run.
+3. If threshold exceeded, approval is requested.
+4. Session starts only after approval.
+5. All events are auditable and exportable.
 
-### Demo Flow (Verified Working)
-```
-[✓] Open http://localhost:3000
-[✓] Click "Try Demo"
-[✓] Hold spacebar + speak (or type goal)
-[✓] Voice Orb reacts to mic input
-[✓] Plan tree materializes
-[✓] Claude decomposes into tasks
-[✓] Agents discovered via pgvector
-[✓] Agents executed in parallel
-[✓] Stellar payments signed + submitted
-[✓] Receipts stored in DB
-[✓] Cost meter ticks live
-[✓] Tx feed shows hashes
-[✓] Narration generated + streamed
-[✓] User hears result
-[✓] Click tx → stellar.expert (real on-chain proof)
-[✓] /sessions/[id] shows verifiable receipts
-```
+## 11) Contract Modules (Priority)
 
-### Bootstrap Flow (Verified Working)
-```
-[✓] pnpm stellar:bootstrap
-    [✓] Generates treasury keypair
-    [✓] Generates issuer keypair
-    [✓] Funds treasury via Friendbot
-    [✓] Creates USDC trustline
-    [✓] Writes .stellar/bootstrap.json
-    [✓] Prints env vars for copy-paste
-    
-[✓] pnpm agents:seed
-    [✓] Generates 12 agent keypairs
-    [✓] Funds each agent with 0.1 XLM + 0.1 USDC
-    [✓] Creates embeddings for semantic search
-    [✓] Upserts into Supabase agents table
-    [✓] Re-runnable (uses existing keypairs if already seeded)
-```
+- [ ] AgentRegistryContract
+- [ ] SessionBudgetContract
+- [ ] TaskEscrowContract
+- [ ] SLAContract
+- [ ] ReputationContract
+- [ ] DisputeContract
+- [ ] SubscriptionContract
+- [ ] RevenueShareContract
 
----
+## 12) Recommended Delivery Order
 
-## 🎯 Judging Checklist
+### Phase 1 (Demo-impact first)
+- Task escrow release
+- Proof verification panel
+- Replay scrubber
+- Budget guardian
+- Fallback rerouting with reason visibility
 
-Before you demonstrate to judges:
-- [x] All API keys in .env.local
-- [x] pnpm install completed without errors
-- [x] pnpm stellar:bootstrap succeeded
-- [x] pnpm agents:seed succeeded
-- [x] pnpm dev:web running on :3000
-- [x] pnpm dev:bridge running on :8080
-- [x] Microphone working or text fallback tested
-- [x] 3 demo goals memorized (flights, weather, trip planning)
-- [x] One tx hash bookmarked for stellar.expert click-through
-- [x] Screen recording as backup
-- [x] README.md reviewed
-- [x] JUDGES_GUIDE.md read completely
-- [x] Verified at least one end-to-end demo run
+### Phase 2 (Provider and marketplace maturity)
+- Provider onboarding wizard
+- Benchmarks and SLA badges
+- Webhooks and analytics
+- Payout exports and statements
 
----
-
-## 🎁 What Works, What's Partial, What's Ready
-
-### ✅ Fully Implemented (Production Ready)
-- Voice input (Web Audio API + Web Speech API)
-- Orchestration pipeline (Claude → Llama → Stellar)
-- Agent discovery (pgvector semantic search)
-- Payment execution (signed Stellar txs with memo binding)
-- Database (Supabase schema complete)
-- Landing page + marketplace
-- Session receipts (verifiable on-chain)
-- Freighter wallet integration
-- Voice bridge (Fastify WebSocket proxy)
-- Documentation (comprehensive)
-- Bootstrap scripts (idempotent)
-
-### 🟡 Partially Implemented (Works But Not All Features)
-- Studio page (structure exists, Plan Tree component ready for r3f)
-- Agent Graph 3D (skeleton ready, particles flow can be added)
-- Mobile app (navigation structure, screens ready for content)
-
-### 🟢 Ready to Extend (P1 Features)
-- Voice cloning (ElevenLabs hook ready)
-- Agent auction (schema ready)
-- Budget guardian (architecture defined)
-- Session replay (timeline data ready)
-- NFT reputation (Soroban ready)
-- Inter-agent hiring (task routing ready)
-
----
-
-## 🚀 Summary
-
-**14 major components** implemented  
-**6 API endpoints** wired  
-**12 demo agents** seeded + funded  
-**100+ lines docs** per setup guide  
-**3500+ lines** of production TypeScript  
-**0 critical bugs** (production-grade error handling)  
-**1 demo** ready for judges  
-
-**Status: READY TO SHIP** ✨
-
----
-
-## 🏁 Next Demo Commands
-
-Copy-paste to your terminal:
-
-```bash
-# Terminal 1: Web
-cd d:\prototyX
-pnpm dev:web
-
-# Terminal 2: Voice bridge
-cd d:\prototyX
-pnpm dev:bridge
-
-# Terminal 3: Browser
-open http://localhost:3000
-```
-
-Then click "Try Demo" and show judges the future of agentic AI on blockchain.
-
----
-
-**Built with ❤️ for NEXUS 2.0 Hackathon**
+### Phase 3 (Contract and enterprise)
+- Full contract suite deployment
+- Dispute workflow automation
+- Team approval and compliance exports
+- Enterprise private marketplace
