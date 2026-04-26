@@ -198,6 +198,11 @@ async function callAgentEndpoint(
   throw lastError ?? new Error("Unknown agent call error");
 }
 
+// Gas-only settlement: self-payment of 0.0000001 XLM so a real tx lands on-chain
+// with the request hash in the memo. No agent cut — only the ~0.00001 XLM
+// Stellar network fee is consumed.
+const GAS_ONLY_AMOUNT = 0.0000001; // 1 stroop — minimum valid payment
+
 async function executeTaskWithPayment(
   task: Task,
   sessionId: string,
@@ -205,12 +210,12 @@ async function executeTaskWithPayment(
   agentResults: Record<string, any>,
 ): Promise<void> {
   const treasurySecret = process.env.PLATFORM_TREASURY_SECRET;
-  if (!treasurySecret) return; // skip payment in demo mode
+  const treasuryPublic = process.env.PLATFORM_TREASURY_PUBLIC;
+  if (!treasurySecret || !treasuryPublic) return; // skip in demo mode
 
   const supabase = await getSupabase();
   if (!supabase) return;
 
-  // Prepare receipt data
   const requestPayload = {
     task_id: task.id,
     capability: task.capability,
@@ -218,28 +223,26 @@ async function executeTaskWithPayment(
   };
   const requestHash = hashRequest(requestPayload);
 
-  // Execute payment
+  // Self-payment: treasury → treasury, minimum amount, memo = sha256(request)
   const paymentResult = await payAgent({
     fromSecret: treasurySecret,
-    toAddress: agent.stellar_address,
-    amountUsdc: agent.price_usdc,
+    toAddress: treasuryPublic,
+    amountUsdc: GAS_ONLY_AMOUNT,
     requestPayload,
   });
 
-  // Wait for confirmation
   const confirmedTx = await awaitConfirmation(paymentResult.txHash);
 
-  // Insert receipt
   const { error: receiptError } = await supabase.from("receipts").insert({
     session_id: sessionId,
     agent_id: agent.id,
     task_id: task.id,
-    amount_usdc: agent.price_usdc,
+    amount_usdc: GAS_ONLY_AMOUNT,
     request_hash: requestHash,
     stellar_tx_hash: paymentResult.txHash,
     stellar_ledger: confirmedTx.ledger ?? paymentResult.ledger,
     from_address: paymentResult.fromAddress,
-    to_address: agent.stellar_address,
+    to_address: treasuryPublic,
     status: "confirmed",
     request_payload: requestPayload as Json,
     response_payload: agentResults[task.id] as Json,
@@ -355,7 +358,7 @@ export async function POST(request: NextRequest) {
             totalCostUsdc += 0.001; // nominal LLM cost
           } else if (selectedAgent) {
             agents[task.id] = selectedAgent;
-            totalCostUsdc += selectedAgent.price_usdc;
+            totalCostUsdc += GAS_ONLY_AMOUNT; // only network gas fee, no agent cut
             await executeTaskWithPayment(task, sessionId, selectedAgent, agentResults);
           }
 

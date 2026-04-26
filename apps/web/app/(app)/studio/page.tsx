@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, Network, Wallet } from "lucide-react";
+import { Activity, ExternalLink, Network, Wallet } from "lucide-react";
 import type { Plan } from "@synapse/shared";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Badge } from "@/components/ui/badge";
@@ -12,17 +12,10 @@ import { VoiceOrb } from "@/components/voice/VoiceOrb";
 import { PlanTree } from "@/components/plan/PlanTree";
 import { TxFeed } from "@/components/ledger/TxFeed";
 import { AgentGraph3D } from "@/components/network/AgentGraph3D";
+import { NetworkModal } from "@/components/network/NetworkModal";
+import { AuctionPanel, type StreamEvent } from "@/components/studio/AuctionPanel";
 
 type TaskVisualState = "pending" | "discovering" | "paying" | "executing" | "done" | "failed";
-
-type OrchestrateResponse = {
-  sessionId: string;
-  plan: Plan;
-  tasks: Array<{ id: string; result?: { ok?: boolean } }>;
-  agents?: Record<string, { name?: string; capability?: string; price_usdc?: number }>;
-  totalCostUsdc: number;
-  narration: string;
-};
 
 type StrategyMode = "balanced" | "cheapest" | "fastest";
 type LanguageMode = "en-US" | "hi-IN" | "es-ES";
@@ -82,6 +75,9 @@ export default function StudioPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [identityCopied, setIdentityCopied] = useState(false);
+  const [streamEvents, setStreamEvents] = useState<StreamEvent[]>([]);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [showNetworkModal, setShowNetworkModal] = useState(false);
 
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const runStartRef = useRef<number | null>(null);
@@ -194,7 +190,7 @@ export default function StudioPage() {
     if (!finalGoal || finalGoal.length < 5) { setError("Please provide a longer goal."); return; }
 
     setError(null); setIsProcessing(true); setNarration(""); setPlan(null); setAgentNames({});
-    setTaskStates({}); setTotalCostUsdc(0); setElapsedMs(0);
+    setTaskStates({}); setTotalCostUsdc(0); setElapsedMs(0); setStreamEvents([]); setProofUrl(null);
     runStartRef.current = Date.now();
     runAbortRef.current?.abort();
     runAbortRef.current = new AbortController();
@@ -202,40 +198,95 @@ export default function StudioPage() {
     setSessionId(localSessionId);
 
     try {
-      const res = await fetch("/api/orchestrate", {
+      const res = await fetch("/api/orchestrate/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: runAbortRef.current.signal,
         body: JSON.stringify({ sessionId: localSessionId, goal: finalGoal, userAddress: authSession?.subject, budgetUsdc, strategy }),
       });
-      if (!res.ok) { const text = await res.text(); throw new Error(text || `Orchestration failed (${res.status})`); }
-
-      const data = (await res.json()) as OrchestrateResponse;
-      setSessionId(data.sessionId); setPlan(data.plan);
-      setAgentNames(
-        Object.fromEntries(
-          Object.entries(data.agents ?? {}).map(([taskId, agent]) => [
-            taskId,
-            agent.name ?? agent.capability ?? "Agent pending",
-          ]),
-        ),
-      );
-      setTotalCostUsdc(data.totalCostUsdc ?? 0); setNarration(data.narration ?? "");
-      setElapsedMs(runStartRef.current ? Date.now() - runStartRef.current : 0);
-
-      const nextItem: HistoryItem = { id: crypto.randomUUID(), goal: finalGoal, createdAt: new Date().toISOString(), strategy, budgetUsdc };
-      setHistory((prev) => {
-        const merged = [nextItem, ...prev.filter((h) => h.goal !== nextItem.goal)].slice(0, 6);
-        localStorage.setItem("synapse.goalHistory", JSON.stringify(merged));
-        return merged;
-      });
-
-      const nextStates: Record<string, TaskVisualState> = {};
-      for (const task of data.plan.tasks) {
-        const result = data.tasks.find((t) => t.id === task.id)?.result;
-        nextStates[task.id] = result?.ok === false ? "failed" : "done";
+      if (!res.ok || !res.body) {
+        const text = await res.text();
+        throw new Error(text || `Orchestration failed (${res.status})`);
       }
-      setTaskStates(nextStates);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+
+      const handleEvent = (type: string, data: Record<string, unknown>) => {
+        const event: StreamEvent = { type, ...data };
+        setStreamEvents(prev => [...prev, event]);
+
+        switch (type) {
+          case "session_start":
+            setSessionId(data.session_id as string);
+            break;
+          case "plan": {
+            const tasks = data.tasks as Array<{ id: string; capability: string; title: string; status: string; depends_on: string[]; parallel_group: number; max_price_usdc: number; query: string }>;
+            const plan: Plan = { summary: data.summary as string, tasks: tasks as Plan["tasks"], narration_template: "" };
+            setPlan(plan);
+            const states: Record<string, TaskVisualState> = {};
+            for (const t of tasks) states[t.id] = "pending";
+            setTaskStates(states);
+            break;
+          }
+          case "winner":
+            if (data.task_id && data.agent) {
+              setAgentNames(prev => ({ ...prev, [data.task_id as string]: (data.agent as { name: string }).name }));
+              setTaskStates(prev => ({ ...prev, [data.task_id as string]: "discovering" }));
+            }
+            break;
+          case "executing":
+            setTaskStates(prev => ({ ...prev, [data.task_id as string]: "executing" }));
+            break;
+          case "payment_confirmed":
+            setTaskStates(prev => ({ ...prev, [data.task_id as string]: "paying" }));
+            break;
+          case "task_done":
+            setTaskStates(prev => ({ ...prev, [data.task_id as string]: "done" }));
+            break;
+          case "narration":
+            setNarration(data.text as string);
+            setElapsedMs(runStartRef.current ? Date.now() - runStartRef.current : 0);
+            // Auto-play TTS
+            void autoPlayNarration(data.text as string);
+            break;
+          case "done":
+            setTotalCostUsdc(data.total_gas_fees as number ?? 0);
+            setProofUrl(data.proof_url as string);
+            if (data.session_id) setSessionId(data.session_id as string);
+            const nextItem: HistoryItem = { id: crypto.randomUUID(), goal: finalGoal, createdAt: new Date().toISOString(), strategy, budgetUsdc };
+            setHistory(prev => {
+              const merged = [nextItem, ...prev.filter(h => h.goal !== nextItem.goal)].slice(0, 6);
+              localStorage.setItem("synapse.goalHistory", JSON.stringify(merged));
+              return merged;
+            });
+            break;
+          case "error":
+            setError(data.message as string ?? "Unknown error");
+            break;
+        }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split("\n\n");
+        buf = parts.pop() ?? "";
+        for (const part of parts) {
+          let eventType = "message";
+          let dataStr = "";
+          for (const line of part.split("\n")) {
+            if (line.startsWith("event: ")) eventType = line.slice(7).trim();
+            else if (line.startsWith("data: ")) dataStr = line.slice(6).trim();
+          }
+          if (dataStr) {
+            try { handleEvent(eventType, JSON.parse(dataStr) as Record<string, unknown>); }
+            catch { /* ignore parse errors */ }
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof DOMException && err.name === "AbortError" ? "Run cancelled." : err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -243,18 +294,14 @@ export default function StudioPage() {
     }
   }
 
-  function cancelRun() { runAbortRef.current?.abort(); setIsProcessing(false); }
-
-  async function speakNarration() {
-    if (!narration || isSpeaking) return;
+  async function autoPlayNarration(text: string) {
+    if (!text || isSpeaking) return;
     setIsSpeaking(true);
-
-    // Try ElevenLabs first
     try {
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: narration }),
+        body: JSON.stringify({ text }),
       });
       if (res.ok) {
         const blob = await res.blob();
@@ -265,19 +312,21 @@ export default function StudioPage() {
         await audio.play();
         return;
       }
-    } catch {
-      // fall through to browser TTS
+    } catch { /* fall through */ }
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1.03; utter.lang = language;
+      utter.onend = () => setIsSpeaking(false);
+      utter.onerror = () => setIsSpeaking(false);
+      window.speechSynthesis.speak(utter);
+    } else {
+      setIsSpeaking(false);
     }
-
-    // Fallback: browser speechSynthesis
-    if (!("speechSynthesis" in window)) { setIsSpeaking(false); return; }
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(narration);
-    utter.rate = 1.03; utter.pitch = 1.0; utter.lang = language;
-    utter.onend = () => setIsSpeaking(false);
-    utter.onerror = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utter);
   }
+
+  function cancelRun() { runAbortRef.current?.abort(); setIsProcessing(false); }
+
 
   if (authLoading || !authSession) {
     return (
@@ -327,47 +376,61 @@ export default function StudioPage() {
       </header>
 
       {/* ── Body: 3-column ── */}
-      <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr_280px]">
+      <div className="grid min-h-0 flex-1 grid-cols-[300px_1fr_240px]">
 
-        {/* ── LEFT: Plan tree ── */}
+        {/* ── LEFT: Auction feed (during run) / Plan tree (at rest) ── */}
         <aside className="flex flex-col overflow-hidden border-r border-white/5">
           <div className="flex items-center gap-2 border-b border-white/5 px-4 py-2.5">
             <Activity className="h-3.5 w-3.5 text-ink-low" />
-            <span className="text-[11px] uppercase tracking-[0.18em] text-ink-low">Plan</span>
-            <span className="text-[11px] text-ink-low/50">· Goal to tasks</span>
+            {streamEvents.length > 0 ? (
+              <>
+                <span className="text-[11px] uppercase tracking-[0.18em] text-ink-low">Agent Auction</span>
+                {isProcessing && <span className="h-1.5 w-1.5 rounded-full bg-brand-teal animate-pulse" />}
+              </>
+            ) : (
+              <>
+                <span className="text-[11px] uppercase tracking-[0.18em] text-ink-low">Plan</span>
+                <span className="text-[11px] text-ink-low/50">· Goal to tasks</span>
+              </>
+            )}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <PlanTree plan={plan} taskStates={taskStates} agentNames={agentNames} />
+            {streamEvents.length > 0
+              ? <AuctionPanel events={streamEvents} />
+              : <PlanTree plan={plan} taskStates={taskStates} agentNames={agentNames} />
+            }
           </div>
         </aside>
 
         {/* ── CENTER: Voice + controls ── */}
-        <section className="flex flex-col overflow-y-auto">
-          {/* Orb area */}
-          <div className="flex flex-1 flex-col items-center justify-center px-6 pt-10 pb-4">
-            <VoiceOrb
-              isListening={isListening}
-              isProcessing={isProcessing}
-              onClick={() => { if (isListening) stopListening(); else startListening(); }}
-            />
-          </div>
+        <section className="min-h-0 overflow-y-auto">
+          <div className="flex min-h-full flex-col">
+            {/* Orb touch area */}
+            <div className="flex shrink-0 items-center justify-center border-b border-white/5 px-5 py-7">
+              <VoiceOrb
+                isListening={isListening}
+                isProcessing={isProcessing}
+                onClick={() => { if (isListening) stopListening(); else startListening(); }}
+              />
+            </div>
 
-          {/* Controls */}
-          <div className="px-6 pb-6">
-            <div className="mx-auto max-w-2xl space-y-3">
+            {/* Controls */}
+            <div className="shrink-0 px-5 py-4">
+            <div className="mx-auto max-w-xl space-y-3">
+
               {/* Textarea */}
               <textarea
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void runOrchestration(); } }}
                 placeholder="Speak or type your goal..."
-                rows={3}
-                className="w-full resize-none rounded-md border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-ink-high outline-none placeholder:text-ink-low focus:border-brand-teal/60"
+                rows={4}
+                className="w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-ink-high outline-none placeholder:text-ink-low focus:border-brand-teal/60"
               />
 
-              {/* Hint + Run */}
+              {/* Run row */}
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-ink-low">Hold space to talk, or type and run.</p>
+                <p className="text-xs text-ink-low/60">Hold space to talk · ⌘↵ to run</p>
                 <div className="flex items-center gap-2">
                   {isProcessing && (
                     <Button size="sm" variant="outline" onClick={cancelRun}>Cancel</Button>
@@ -378,41 +441,34 @@ export default function StudioPage() {
                     disabled={isProcessing || goal.trim().length < 5}
                     className="rounded-md bg-brand-crimson px-5 py-2 text-sm font-semibold text-white shadow-[0_0_12px_rgba(220,37,71,0.35)] transition hover:bg-brand-crimson/90 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {isProcessing ? "Running..." : "Run"}
+                    {isProcessing ? "Running…" : "Run"}
                   </button>
                 </div>
               </div>
 
-              {/* Strategy + Language */}
-              <div className="grid gap-3 sm:grid-cols-2">
-                <SelectField
-                  label="Strategy"
+              {/* Compact options row */}
+              <div className="flex items-center gap-2 rounded-lg border border-white/8 bg-black/20 px-3 py-2">
+                <select
                   value={strategy}
-                  onChange={(v) => setStrategy(v as StrategyMode)}
-                  options={[
-                    { value: "balanced", label: "Balanced" },
-                    { value: "cheapest", label: "Cheapest" },
-                    { value: "fastest", label: "Fastest" },
-                  ]}
-                />
-                <SelectField
-                  label="Language"
+                  onChange={(e) => setStrategy(e.target.value as StrategyMode)}
+                  className="appearance-none bg-transparent text-xs text-ink-mid outline-none cursor-pointer hover:text-ink-high"
+                >
+                  <option value="balanced" className="bg-bg-sunken">Balanced</option>
+                  <option value="cheapest" className="bg-bg-sunken">Cheapest</option>
+                  <option value="fastest" className="bg-bg-sunken">Fastest</option>
+                </select>
+                <span className="text-white/15">|</span>
+                <select
                   value={language}
-                  onChange={(v) => setLanguage(v as LanguageMode)}
-                  options={[
-                    { value: "en-US", label: "English (US)" },
-                    { value: "hi-IN", label: "Hindi" },
-                    { value: "es-ES", label: "Spanish" },
-                  ]}
-                />
-              </div>
-
-              {/* Budget */}
-              <div className="rounded-md border border-white/10 bg-black/20 px-3 py-3">
-                <div className="flex items-center justify-between text-xs text-ink-low">
-                  <span>Budget ceiling</span>
-                  <span className="font-mono text-ink-mid">{budgetUsdc.toFixed(3)} XLM</span>
-                </div>
+                  onChange={(e) => setLanguage(e.target.value as LanguageMode)}
+                  className="appearance-none bg-transparent text-xs text-ink-mid outline-none cursor-pointer hover:text-ink-high"
+                >
+                  <option value="en-US" className="bg-bg-sunken">English</option>
+                  <option value="hi-IN" className="bg-bg-sunken">Hindi</option>
+                  <option value="es-ES" className="bg-bg-sunken">Spanish</option>
+                </select>
+                <span className="text-white/15">|</span>
+                <span className="text-[10px] text-ink-low">Budget</span>
                 <input
                   type="range"
                   min={0.005}
@@ -420,95 +476,115 @@ export default function StudioPage() {
                   step={0.005}
                   value={budgetUsdc}
                   onChange={(e) => setBudgetUsdc(Number(e.target.value))}
-                  className="mt-2 w-full accent-brand-teal"
+                  className="flex-1 accent-brand-teal"
                 />
+                <span className="font-mono text-[10px] text-ink-mid w-16 text-right">{budgetUsdc.toFixed(3)} XLM</span>
               </div>
 
-              {/* Quick goals */}
-              <div className="flex flex-wrap gap-2">
+              {/* Quick goals — single line horizontal scroll */}
+              <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {QUICK_GOALS.map((preset) => (
                   <button
                     key={preset}
                     type="button"
                     onClick={() => setGoal(preset)}
-                    className="rounded-full border border-white/10 bg-white/3 px-3 py-1 text-xs text-ink-mid transition hover:bg-white/8 hover:text-ink-high"
+                    className="shrink-0 rounded-full border border-white/10 bg-white/3 px-3 py-1 text-xs text-ink-mid transition hover:bg-white/8 hover:text-ink-high"
                   >
-                    {preset.length > 52 ? `${preset.slice(0, 52)}...` : preset}
+                    {preset.length > 40 ? `${preset.slice(0, 40)}…` : preset}
+                  </button>
+                ))}
+                {history.slice(0, 3).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => { setGoal(item.goal); setStrategy(item.strategy); setBudgetUsdc(item.budgetUsdc); void runOrchestration(item.goal); }}
+                    className="shrink-0 rounded-full border border-brand-teal/20 bg-brand-teal/5 px-3 py-1 text-xs text-brand-teal/70 transition hover:bg-brand-teal/10 hover:text-brand-teal"
+                  >
+                    ↩ {item.goal.length > 36 ? `${item.goal.slice(0, 36)}…` : item.goal}
                   </button>
                 ))}
               </div>
 
-              {/* History */}
-              {history.length > 0 && (
-                <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-ink-low">recent commands</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {history.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => { setGoal(item.goal); setStrategy(item.strategy); setBudgetUsdc(item.budgetUsdc); void runOrchestration(item.goal); }}
-                        className="rounded-full border border-white/10 bg-white/3 px-3 py-1 text-xs text-ink-mid transition hover:bg-white/8 hover:text-ink-high"
-                      >
-                        {item.goal.length > 44 ? `${item.goal.slice(0, 44)}...` : item.goal}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {error && <p className="text-sm text-brand-crimson">{error}</p>}
 
               {narration && (
-                <div className="rounded-md border border-white/10 bg-black/20 px-4 py-3 text-center text-sm text-ink-mid">
-                  {narration}
-                  <div className="mt-3 flex justify-center">
-                    <Button variant="outline" size="sm" disabled={isSpeaking} onClick={() => void speakNarration()}>
-                      {isSpeaking ? "Speaking…" : "Play narration"}
+                <div className="rounded-lg border border-white/10 bg-black/20 px-4 py-3">
+                  <p className="text-sm text-ink-mid leading-relaxed">{narration}</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Button variant="outline" size="sm" disabled={isSpeaking} onClick={() => void autoPlayNarration(narration)}>
+                      {isSpeaking ? "Speaking…" : "Replay narration"}
                     </Button>
+                    {proofUrl && (
+                      <a
+                        href={proofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-brand-teal/30 bg-brand-teal/8 px-3 py-1.5 text-xs text-brand-teal hover:bg-brand-teal/15 transition"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        View proof
+                      </a>
+                    )}
+                    {proofUrl && (
+                      <button
+                        type="button"
+                        onClick={() => { navigator.clipboard.writeText(`${window.location.origin}${proofUrl}`); }}
+                        className="ml-auto text-[11px] text-ink-low hover:text-ink-mid transition"
+                      >
+                        Copy proof link
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Agent graph strip */}
-          <div className="flex h-40 shrink-0 items-center gap-3 border-t border-white/5 px-6">
-            <div className="flex items-center gap-2 text-ink-low">
-              <Network className="h-4 w-4" />
-              <div>
-                <div className="text-[11px] uppercase tracking-[0.16em]">Agent network</div>
-                <div className="text-[10px] text-ink-low/50">Hires + payment paths</div>
-              </div>
             </div>
-            <div className="min-h-0 flex-1">
-              <AgentGraph3D plan={plan} activeTaskIds={activeTaskIds} agentNames={agentNames} />
+
+            {/* Agent graph strip — included in center scroll */}
+            <div className="mt-auto flex h-32 shrink-0 items-center gap-3 border-t border-white/5 px-4">
+              <div className="flex shrink-0 flex-col gap-1.5">
+                <div className="flex items-center gap-1.5 text-ink-low">
+                  <Network className="h-3.5 w-3.5" />
+                  <div>
+                    <div className="text-[10px] uppercase tracking-[0.14em]">Agent network</div>
+                    <div className="text-[9px] text-ink-low/40">Hires + payment paths</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNetworkModal(true)}
+                  className="flex items-center gap-1 rounded-md border border-brand-teal/30 bg-brand-teal/8 px-2.5 py-1 text-[11px] text-brand-teal transition hover:bg-brand-teal/15"
+                >
+                  <Network className="h-3 w-3" />
+                  Full view
+                </button>
+              </div>
+              <div className="min-h-0 flex-1">
+                <AgentGraph3D plan={plan} activeTaskIds={activeTaskIds} agentNames={agentNames} />
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ── RIGHT: Runtime / Cost / Ledger ── */}
-        <aside className="flex flex-col gap-0 overflow-hidden border-l border-white/5">
-          {/* Runtime */}
-          <div className="border-b border-white/5 px-5 py-4">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-ink-low">Runtime</p>
-            <p className="mt-2 font-mono text-2xl text-brand-teal">{(elapsedMs / 1000).toFixed(1)}s</p>
-          </div>
-
-          {/* Session cost */}
-          <div className="border-b border-white/5 px-5 py-4">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-ink-low">Session cost</p>
-              <span className="rounded-full border border-brand-teal/40 px-2 py-0.5 font-mono text-[10px] text-brand-teal">XLM</span>
+        {/* ── RIGHT: Stats + Ledger ── */}
+        <aside className="flex flex-col overflow-hidden border-l border-white/5">
+          {/* Combined stats row */}
+          <div className="grid grid-cols-2 border-b border-white/5">
+            <div className="border-r border-white/5 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.16em] text-ink-low">Runtime</p>
+              <p className="mt-1 font-mono text-xl text-brand-teal">{(elapsedMs / 1000).toFixed(1)}s</p>
             </div>
-            <p className="mt-2 font-mono text-2xl tracking-wider text-brand-teal">
-              {totalCostUsdc.toFixed(6)}
-            </p>
-            <p className="mt-2 text-xs text-ink-low">
-              Stellar testnet fee path · You{" "}
-              <span className="font-mono text-brand-teal">{totalCostUsdc.toFixed(6)} XLM</span>
-            </p>
+            <div className="px-4 py-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-ink-low">Cost</p>
+                <span className="rounded border border-brand-teal/30 px-1.5 py-0.5 font-mono text-[9px] text-brand-teal">XLM</span>
+              </div>
+              <p className="mt-1 font-mono text-xl text-brand-teal">{totalCostUsdc.toFixed(5)}</p>
+            </div>
           </div>
+          <p className="border-b border-white/5 px-4 py-1.5 text-[10px] text-ink-low/50">
+            Stellar testnet · gas only · {totalCostUsdc.toFixed(6)} XLM
+          </p>
 
           {/* Ledger feed */}
           <div className="min-h-0 flex-1 overflow-hidden">
@@ -516,7 +592,7 @@ export default function StudioPage() {
           </div>
 
           {sessionId && (
-            <div className="border-t border-white/5 px-5 py-3">
+            <div className="border-t border-white/5 px-4 py-2.5">
               <Link href={`/sessions/${sessionId}`} className="text-xs text-brand-teal hover:underline">
                 View session receipts →
               </Link>
@@ -524,40 +600,16 @@ export default function StudioPage() {
           )}
         </aside>
       </div>
-    </main>
-  );
-}
 
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: Array<{ value: string; label: string }>;
-}) {
-  return (
-    <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2">
-      <p className="text-[10px] uppercase tracking-[0.14em] text-ink-low">{label}</p>
-      <div className="relative mt-1">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none bg-transparent py-0.5 text-sm text-ink-high outline-none"
-        >
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value} className="bg-bg-sunken">
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-ink-low">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-        </span>
-      </div>
-    </div>
+      {showNetworkModal && (
+        <NetworkModal
+          plan={plan}
+          activeTaskIds={activeTaskIds}
+          agentNames={agentNames}
+          sessionId={sessionId}
+          onClose={() => setShowNetworkModal(false)}
+        />
+      )}
+    </main>
   );
 }

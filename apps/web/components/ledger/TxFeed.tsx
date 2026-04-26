@@ -114,7 +114,7 @@ export function TxFeed({ sessionId }: TxFeedProps) {
                       <ExternalLink className="h-3 w-3" />
                     </a>
                     <span className="font-mono text-brand-mint">
-                      {Number(row.amount_usdc).toFixed(6)} XLM
+                      gas only
                     </span>
                   </div>
 

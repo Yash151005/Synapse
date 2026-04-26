@@ -116,7 +116,7 @@ async function seedAgents(
           stellar_address: stellarAddress,
           reputation: 5.0,
           total_jobs: 0,
-          embedding: embedding as unknown as string,
+          embedding: embedding as unknown as number[],
           metadata: {
             sla_latency_ms: 2000,
             sla_success_pct: 95,

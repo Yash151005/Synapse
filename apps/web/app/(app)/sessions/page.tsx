@@ -205,10 +205,9 @@ export default function SessionsArchivePage() {
             </div>
           ) : (
             sessions.map((session) => (
-              <Link
+              <article
                 key={session.id}
-                href={`/sessions/${session.id}`}
-                className="glass block p-4 transition hover:border-brand-teal/30"
+                className="glass p-4 transition hover:border-brand-teal/30"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -240,7 +239,28 @@ export default function SessionsArchivePage() {
                     </div>
                   ))}
                 </div>
-              </Link>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link href={`/sessions/${session.id}`}>
+                    <Button size="sm">
+                      <FileText className="h-4 w-4" />
+                      View session
+                    </Button>
+                  </Link>
+                  <Link href={`/sessions/${session.id}#replay`}>
+                    <Button size="sm" variant="outline">
+                      <Play className="h-4 w-4" />
+                      Replay
+                    </Button>
+                  </Link>
+                  <Link href={`/sessions/${session.id}#auction`}>
+                    <Button size="sm" variant="outline">
+                      <Sparkles className="h-4 w-4" />
+                      Agent auction
+                    </Button>
+                  </Link>
+                </div>
+              </article>
             ))
           )}
         </div>
