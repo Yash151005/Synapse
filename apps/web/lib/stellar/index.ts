@@ -1,6 +1,6 @@
 // Barrel for the Stellar layer. Anything orchestrator/UI needs imports from here.
 
-export { horizon, networkPassphrase, loadAccount } from "./client";
+export { horizon, networkPassphrase, loadAccount, resetHorizon } from "./client";
 export { stellarEnv, isStellarConfigured } from "./env";
 export {
   generateKeypair,

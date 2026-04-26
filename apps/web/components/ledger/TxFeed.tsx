@@ -28,6 +28,18 @@ async function fetchHorizon(hash: string): Promise<HorizonTxResponse | null> {
   }
 }
 
+// Poll our own server API (service-role key, no RLS issues) for receipts.
+async function fetchReceipts(sessionId: string): Promise<ReceiptRow[]> {
+  try {
+    const res = await fetch(`/api/receipts?sessionId=${encodeURIComponent(sessionId)}`);
+    if (!res.ok) return [];
+    const json = await res.json() as { receipts: ReceiptRow[] };
+    return json.receipts ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export function TxFeed({ sessionId }: TxFeedProps) {
   const [rows, setRows] = useState<ReceiptRow[]>([]);
   const [horizon, setHorizon] = useState<Record<string, HorizonTxResponse>>({});
@@ -37,7 +49,7 @@ export function TxFeed({ sessionId }: TxFeedProps) {
   useEffect(() => {
     for (const row of rows) {
       const h = row.stellar_tx_hash;
-      if (h && !fetchedRef.current.has(h)) {
+      if (h && h !== "PENDING" && h !== "ERROR" && h.length === 64 && !fetchedRef.current.has(h)) {
         fetchedRef.current.add(h);
         void fetchHorizon(h).then((data) => {
           if (data) setHorizon((prev) => ({ ...prev, [h]: data }));
@@ -46,32 +58,44 @@ export function TxFeed({ sessionId }: TxFeedProps) {
     }
   }, [rows]);
 
-  // Supabase: initial load + realtime insert feed
+  // Poll /api/receipts every 3 s — server-side read, bypasses browser RLS.
+  // Also subscribe via Supabase Realtime for instant push when available.
   useEffect(() => {
     if (!sessionId) { setRows([]); return; }
+
+    let destroyed = false;
+
+    const loadReceipts = async () => {
+      const data = await fetchReceipts(sessionId);
+      if (!destroyed) setRows(data);
+    };
+
+    void loadReceipts();
+    const pollId = window.setInterval(() => { void loadReceipts(); }, 3000);
+
+    // Realtime bonus: instant push on INSERT without waiting for next poll
     const supabase = supabaseBrowser();
-    if (!supabase) return;
+    let channel: ReturnType<NonNullable<typeof supabase>["channel"]> | null = null;
+    if (supabase) {
+      channel = supabase
+        .channel(`txfeed:${sessionId}`)
+        .on("postgres_changes", {
+          event: "INSERT",
+          schema: "public",
+          table: "receipts",
+          filter: `session_id=eq.${sessionId}`,
+        }, () => {
+          // Realtime fired — immediately refresh from the server API
+          void loadReceipts();
+        })
+        .subscribe();
+    }
 
-    void supabase
-      .from("receipts")
-      .select("*")
-      .eq("session_id", sessionId)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setRows((data ?? []) as ReceiptRow[]));
-
-    const channel = supabase
-      .channel(`txfeed:${sessionId}`)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "receipts",
-        filter: `session_id=eq.${sessionId}`,
-      }, (payload) => {
-        setRows((prev) => [payload.new as ReceiptRow, ...prev]);
-      })
-      .subscribe();
-
-    return () => { void supabase.removeChannel(channel); };
+    return () => {
+      destroyed = true;
+      window.clearInterval(pollId);
+      if (supabase && channel) void supabase.removeChannel(channel);
+    };
   }, [sessionId]);
 
   return (
@@ -95,7 +119,6 @@ export function TxFeed({ sessionId }: TxFeedProps) {
           <ul className="space-y-2">
             {rows.map((row) => {
               const hz = horizon[row.stellar_tx_hash];
-              // Memo verification: request_hash (hex) should match memo_hex from Horizon
               const memoMatch = hz?.memo_hex
                 ? hz.memo_hex === row.request_hash
                 : null;
@@ -169,6 +192,11 @@ export function TxFeed({ sessionId }: TxFeedProps) {
                           </span>
                         </div>
                       )}
+                    </div>
+                  ) : row.stellar_tx_hash === "PENDING" ? (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-ink-low/50">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      awaiting confirmation…
                     </div>
                   ) : (
                     <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-ink-low/50">

@@ -15,6 +15,12 @@ export function horizon(): Horizon.Server {
   return _server;
 }
 
+/** Drop the singleton so the next horizon() call opens a fresh TCP connection.
+ *  Call this before retrying after a TLS / socket error. */
+export function resetHorizon(): void {
+  _server = null;
+}
+
 export function networkPassphrase(): string {
   return stellarEnv.network === "PUBLIC" ? Networks.PUBLIC : Networks.TESTNET;
 }

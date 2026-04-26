@@ -85,7 +85,7 @@ export interface Database {
         Row: {
           id: string;
           session_id: string;
-          agent_id: string;
+          agent_id: string | null;
           task_id: string;
           amount_usdc: number;
           request_hash: string;
@@ -104,7 +104,7 @@ export interface Database {
         Insert: {
           id?: string;
           session_id: string;
-          agent_id: string;
+          agent_id?: string | null;
           task_id: string;
           amount_usdc: number;
           request_hash: string;

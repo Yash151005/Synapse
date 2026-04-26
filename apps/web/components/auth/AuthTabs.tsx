@@ -26,9 +26,8 @@ import { isFreighterInstalled } from "@/lib/stellar/freighter";
 type AuthTab = "login" | "register";
 type RegisterRole = "buyer" | "provider";
 
-export function AuthTabs({ initialTab = "login" }: { initialTab?: AuthTab }) {
+export function AuthTabs({ initialTab = "login", nextHref }: { initialTab?: AuthTab; nextHref: string }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { session, loginWithFreighter, loginWithPasskey, registerPasskey } = useAuth();
   const [activeTab, setActiveTab] = useState<AuthTab>(initialTab);
   const [role, setRole] = useState<RegisterRole>("buyer");
@@ -38,8 +37,6 @@ export function AuthTabs({ initialTab = "login" }: { initialTab?: AuthTab }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [busyMode, setBusyMode] = useState<"freighter" | "passkey-login" | "passkey-register" | null>(null);
   const [freighterInstalled, setFreighterInstalled] = useState<boolean | null>(null);
-
-  const nextHref = searchParams.get("next") ?? (role === "provider" ? "/developer" : "/dashboard");
 
   useEffect(() => {
     isFreighterInstalled().then(setFreighterInstalled).catch(() => setFreighterInstalled(false));
@@ -400,6 +397,14 @@ function RoleButton({
       <p className="mt-1 text-xs text-ink-low">{subtitle}</p>
     </button>
   );
+}
+
+export function AuthTabsWrapper({ initialTab = "login" }: { initialTab?: AuthTab }) {
+  const searchParams = useSearchParams();
+  const role = initialTab === "register" ? "provider" : "buyer";
+  const nextHref = searchParams.get("next") ?? (role === "provider" ? "/developer" : "/dashboard");
+
+  return <AuthTabs initialTab={initialTab} nextHref={nextHref} />;
 }
 
 function TrustTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {

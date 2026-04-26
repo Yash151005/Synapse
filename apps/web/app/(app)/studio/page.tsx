@@ -79,6 +79,20 @@ export default function StudioPage() {
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [showNetworkModal, setShowNetworkModal] = useState(false);
 
+  const [approvalRequired, setApprovalRequired] = useState<{
+    session_id: string;
+    agents: Array<{
+      task_id: string;
+      capability: string;
+      agent_name: string;
+      agent_address: string | null;
+      amount_xlm: number;
+      sub_agent: { capability: string; name: string; amount_xlm: number } | null;
+    }>;
+    total_xlm: number;
+    total_payments: number;
+  } | null>(null);
+
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const runStartRef = useRef<number | null>(null);
   const runAbortRef = useRef<AbortController | null>(null);
@@ -236,6 +250,12 @@ export default function StudioPage() {
               setTaskStates(prev => ({ ...prev, [data.task_id as string]: "discovering" }));
             }
             break;
+          case "payment_approval_required":
+            setApprovalRequired(data as typeof approvalRequired);
+            break;
+          case "payment_approved":
+            setApprovalRequired(null);
+            break;
           case "executing":
             setTaskStates(prev => ({ ...prev, [data.task_id as string]: "executing" }));
             break;
@@ -264,6 +284,15 @@ export default function StudioPage() {
             break;
           case "error":
             setError(data.message as string ?? "Unknown error");
+            setTaskStates(prev => {
+              const updated = { ...prev };
+              for (const id of Object.keys(updated)) {
+                if (updated[id] === "executing" || updated[id] === "paying" || updated[id] === "discovering") {
+                  updated[id] = "failed";
+                }
+              }
+              return updated;
+            });
             break;
         }
       };
@@ -326,6 +355,17 @@ export default function StudioPage() {
   }
 
   function cancelRun() { runAbortRef.current?.abort(); setIsProcessing(false); }
+
+  async function handleApproval(approved: boolean) {
+    if (!sessionId) return;
+    setApprovalRequired(null);
+    if (!approved) { setIsProcessing(false); }
+    await fetch("/api/orchestrate/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId, approved }),
+    });
+  }
 
 
   if (authLoading || !authSession) {
@@ -609,6 +649,65 @@ export default function StudioPage() {
           sessionId={sessionId}
           onClose={() => setShowNetworkModal(false)}
         />
+      )}
+
+      {/* ── PAYMENT APPROVAL MODAL ── */}
+      {approvalRequired && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-bg-raised shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="border-b border-white/8 px-5 py-4">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-ink-low mb-1">Payment confirmation</p>
+              <h2 className="text-base font-semibold text-ink-high">Approve agent payments?</h2>
+              <p className="mt-1 text-xs text-ink-low">
+                {approvalRequired.total_payments} payment{approvalRequired.total_payments !== 1 ? "s" : ""} ·{" "}
+                <span className="font-mono text-brand-mint">{approvalRequired.total_xlm.toFixed(7)} XLM</span> total on Stellar testnet
+              </p>
+            </div>
+
+            {/* Agent list */}
+            <ul className="max-h-56 overflow-y-auto divide-y divide-white/5 px-0">
+              {approvalRequired.agents.map((a) => (
+                <li key={a.task_id} className="px-5 py-3 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <span className="font-mono text-brand-teal">{a.capability}</span>
+                      <span className="ml-2 text-ink-mid">{a.agent_name}</span>
+                    </div>
+                    <span className="font-mono text-brand-mint shrink-0">{a.amount_xlm.toFixed(7)} XLM</span>
+                  </div>
+                  {a.agent_address && (
+                    <p className="mt-0.5 font-mono text-[10px] text-ink-low/60 truncate">{a.agent_address}</p>
+                  )}
+                  {a.sub_agent && (
+                    <div className="mt-1.5 ml-3 border-l border-white/10 pl-2 flex items-center justify-between gap-2">
+                      <span className="text-ink-low/70">↳ {a.sub_agent.capability} helper · {a.sub_agent.name}</span>
+                      <span className="font-mono text-brand-mint/70 shrink-0">{a.sub_agent.amount_xlm.toFixed(7)} XLM</span>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            {/* Actions */}
+            <div className="border-t border-white/8 flex gap-3 px-5 py-4">
+              <button
+                type="button"
+                onClick={() => void handleApproval(true)}
+                className="flex-1 rounded-lg bg-brand-mint/15 border border-brand-mint/30 py-2.5 text-sm font-semibold text-brand-mint hover:bg-brand-mint/25 transition-colors"
+              >
+                Approve &amp; Pay
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleApproval(false)}
+                className="flex-1 rounded-lg border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-ink-low hover:bg-white/10 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

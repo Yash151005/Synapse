@@ -1,4 +1,5 @@
 .git
+**/.git
 .gitignore
 .claude
 
@@ -9,14 +10,16 @@ node_modules
 .next
 **/.next
 dist
+apps/voice-bridge/dist
 out
 .turbo
 coverage
 *.tsbuildinfo
 
-.env
-.env.*
-!.env.local.example
+# .env is intentionally NOT excluded so Next.js can read NEXT_PUBLIC_* at build time.
+# Keep .env.local out (local overrides) but allow the committed .env.
+.env.local
+**/.env.local
 
 *.log
 .bootstrap.log
@@ -32,8 +35,12 @@ temp
 .cache
 .vercel
 
-apps/mobile/.expo
-apps/mobile/.expo-shared
-apps/mobile/android
-apps/mobile/ios
-apps/mobile/web-build
+# Mobile app not needed for Docker build
+apps/mobile
+
+# Synapse copy/zip not needed
+Synapse
+Synapse.zip
+
+# Rust contracts not needed
+contracts

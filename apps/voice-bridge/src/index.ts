@@ -13,6 +13,7 @@
 
 import Fastify from "fastify";
 import fastifyWebsocket from "@fastify/websocket";
+import WebSocket from "ws";
 import { config as loadEnv } from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -84,9 +85,9 @@ fastify.register(async (fastify) => {
       // Handle incoming frames from client → OpenAI
       socket.on("message", (data: WebSocket.Data) => {
         if (openaiSocket?.readyState === WebSocket.OPEN) {
-          openaiSocket.send(data, (err) => {
+          openaiSocket.send(data, (err: Error | undefined) => {
             if (err) {
-              fastify.log.error(`[${sessionId}] Error sending to OpenAI:`, err);
+              fastify.log.error({ err }, `[${sessionId}] Error sending to OpenAI`);
             }
           });
         }
@@ -95,9 +96,9 @@ fastify.register(async (fastify) => {
       // Handle incoming frames from OpenAI → client
       openaiSocket.on("message", (data: WebSocket.Data) => {
         if (socket.readyState === WebSocket.OPEN) {
-          socket.send(data, (err) => {
+          socket.send(data, (err: Error | undefined) => {
             if (err) {
-              fastify.log.error(`[${sessionId}] Error sending to client:`, err);
+              fastify.log.error({ err }, `[${sessionId}] Error sending to client`);
             }
           });
         }
@@ -108,7 +109,7 @@ fastify.register(async (fastify) => {
         fastify.log.info(`[${sessionId}] OpenAI tunnel established`);
       });
 
-      openaiSocket.on("close", (code, reason) => {
+      openaiSocket.on("close", (code: number, reason: Buffer) => {
         openaiClosed = true;
         fastify.log.info(`[${sessionId}] OpenAI closed (code=${code}, reason=${reason})`);
         if (!clientClosed && socket.readyState === WebSocket.OPEN) {
@@ -116,11 +117,11 @@ fastify.register(async (fastify) => {
         }
       });
 
-      openaiSocket.on("error", (err) => {
-        fastify.log.error(`[${sessionId}] OpenAI error:`, err);
+      openaiSocket.on("error", (err: Error) => {
+        fastify.log.error({ err }, `[${sessionId}] OpenAI error`);
       });
 
-      socket.on("close", (code, reason) => {
+      socket.on("close", (code: number, reason: Buffer) => {
         clientClosed = true;
         fastify.log.info(`[${sessionId}] Client closed (code=${code})`);
         if (!openaiClosed && openaiSocket?.readyState === WebSocket.OPEN) {
@@ -128,11 +129,12 @@ fastify.register(async (fastify) => {
         }
       });
 
-      socket.on("error", (err) => {
-        fastify.log.error(`[${sessionId}] Client error:`, err);
+      socket.on("error", (err: Error) => {
+        fastify.log.error({ err }, `[${sessionId}] Client error`);
       });
     } catch (err) {
-      fastify.log.error(`[${sessionId}] Setup error:`, err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      fastify.log.error({ err }, `[${sessionId}] Setup error: ${errMsg}`);
       socket.close(1011, "Internal server error");
     }
   });
@@ -141,10 +143,11 @@ fastify.register(async (fastify) => {
 /**
  * Global error handler
  */
-fastify.setErrorHandler((error, request, reply) => {
-  fastify.log.error(`[${request.url}] ${error.message}`);
+fastify.setErrorHandler((error: Error, request, reply) => {
+  const msg = error instanceof Error ? error.message : String(error);
+  fastify.log.error(`[${request.url}] ${msg}`);
   reply.statusCode = 500;
-  reply.send({ error: error.message });
+  reply.send({ error: msg });
 });
 
 // Start server
@@ -152,6 +155,7 @@ try {
   await fastify.listen({ port: PORT, host: "0.0.0.0" });
   console.log(`✔ voice-bridge listening on ws://0.0.0.0:${PORT}`);
 } catch (err) {
-  fastify.log.error(err);
+  const errMsg = err instanceof Error ? err.message : String(err);
+  fastify.log.error(`Failed to start voice-bridge: ${errMsg}`);
   process.exit(1);
 }

@@ -12,8 +12,6 @@ RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/web/package.json apps/web/package.json
-COPY apps/mobile/package.json apps/mobile/package.json
-COPY apps/voice-bridge/package.json apps/voice-bridge/package.json
 COPY packages/shared/package.json packages/shared/package.json
 
 RUN pnpm --filter @synapse/web... install --frozen-lockfile
